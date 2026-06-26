@@ -6,7 +6,7 @@ import { DealRoom } from './components/DealRoom';
 import { Dashboard } from './components/Dashboard';
 import { Auth } from './components/Auth';
 import { supabase } from './supabaseClient';
-import { Cpu, Users, EyeOff, BarChart3, Home, Shield, Clock, LogOut } from 'lucide-react';
+import { Cpu, Users, EyeOff, BarChart3, Home, Shield, Clock, LogOut, Menu, X } from 'lucide-react';
 
 type TabType = 'landing' | 'advisory' | 'marketplace' | 'dealroom' | 'dashboard';
 
@@ -98,8 +98,8 @@ function App() {
         left: 0,
         zIndex: 100,
         transition: 'transform 0.3s ease',
-        transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(0)' // standard desktop
-      }} className={`sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
+        transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)' // standard desktop has CSS fallback
+      }} className="sidebar">
         
         {/* Logo Brand */}
         <div style={{
@@ -208,14 +208,7 @@ function App() {
       </aside>
 
       {/* Main Container */}
-      <div style={{
-        marginLeft: 'var(--sidebar-width)',
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: '100vh',
-        width: `calc(100% - var(--sidebar-width))`
-      }}>
+      <div className="main-container">
         
         {/* Header bar */}
         <header style={{
@@ -231,11 +224,31 @@ function App() {
           top: 0,
           zIndex: 90
         }}>
-          {/* Header Left (Breadcrumbs) */}
-          <div style={{ fontSize: '14px', fontWeight: 500, color: '#94a3b8' }}>
-            Active View: <strong style={{ color: '#fff', textTransform: 'capitalize' }}>
-              {activeTab === 'landing' ? 'Home Overview' : activeTab}
-            </strong>
+          {/* Header Left (Breadcrumbs & Mobile Menu Toggle) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="mobile-menu-toggle"
+              style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                color: '#fff',
+                cursor: 'pointer',
+                padding: '6px',
+                borderRadius: '8px',
+                display: 'none', // shown via media query on mobile
+                alignItems: 'center',
+                justifyContent: 'center',
+                outline: 'none'
+              }}
+            >
+              {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
+            <div style={{ fontSize: '14px', fontWeight: 500, color: '#94a3b8' }}>
+              Active View: <strong style={{ color: '#fff', textTransform: 'capitalize' }}>
+                {activeTab === 'landing' ? 'Home Overview' : activeTab}
+              </strong>
+            </div>
           </div>
 
           {/* Header Right */}
@@ -325,13 +338,31 @@ function App() {
 
       {/* Basic Responsive Styling overrides */}
       <style>{`
+        .main-container {
+          margin-left: var(--sidebar-width);
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          min-height: 100vh;
+          width: calc(100% - var(--sidebar-width));
+          transition: margin-left 0.3s ease, width 0.3s ease;
+        }
+
+        .sidebar {
+          transform: translateX(0);
+        }
+
         @media (max-width: 991px) {
           .sidebar {
-            transform: translateX(-100%);
+            transform: ${mobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)'} !important;
+            box-shadow: ${mobileMenuOpen ? '0 0 30px rgba(0,0,0,0.8)' : 'none'} !important;
           }
-          .main-content {
+          .main-container {
             margin-left: 0 !important;
             width: 100% !important;
+          }
+          .mobile-menu-toggle {
+            display: flex !important;
           }
         }
       `}</style>
