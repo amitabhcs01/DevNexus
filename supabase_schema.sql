@@ -171,3 +171,32 @@ VALUES
 ('dev-003', 'Robert C., CISO SafeVault', 4.9, 'Exceptional security mindset. Marcus did not just advise, he wrote robust Rust wrappers that eliminated memory leaks and potential buffer overflows.', '2026-04-18'),
 ('dev-004', 'Emily T., Lead Designer Velo', 5.0, 'Chloe translates Figma prototypes into React code pixel-for-pixel, and her motion choreographies are absolutely beautiful.', '2026-05-30')
 ON CONFLICT DO NOTHING;
+
+-- 5. Profiles Table (Stores user signup details)
+CREATE TABLE IF NOT EXISTS public.profiles (
+    id UUID PRIMARY KEY,
+    email TEXT NOT NULL,
+    role TEXT NOT NULL,
+    company_name TEXT,
+    corporate_title TEXT,
+    project_budget NUMERIC,
+    full_name TEXT,
+    key_skills TEXT,
+    experience_level TEXT,
+    portfolio_link TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public insert to profiles" 
+ON public.profiles FOR INSERT 
+WITH CHECK (true);
+
+CREATE POLICY "Allow public read access to profiles" 
+ON public.profiles FOR SELECT 
+USING (true);
+
+CREATE POLICY "Allow update for profile owners" 
+ON public.profiles FOR UPDATE 
+USING (auth.uid() = id);

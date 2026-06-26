@@ -32,7 +32,7 @@ To run the application in fully persistent mode, configure a free database insta
 2. Open the file [supabase_schema.sql](file:///c:/Users/HP/OneDrive/Desktop/DevNexus/supabase_schema.sql) in your local code directory.
 3. Copy the entire SQL content and paste it into the Supabase SQL editor window.
 4. Click **Run** to execute. This script will:
-   - Create tables: `developers`, `reviews`, `briefs`, `rooms`.
+   - Create tables: `developers`, `reviews`, `briefs`, `rooms`, and `profiles`.
    - Seed the initial vetted developers.
    - **Enable Row-Level Security (RLS)** on all tables.
    - Enforce policies so users can only read/write their own AI briefs (`auth.uid() = user_id`) and read developer registry info securely.

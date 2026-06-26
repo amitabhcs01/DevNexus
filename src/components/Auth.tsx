@@ -99,6 +99,27 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           }
         });
         if (error) throw error;
+
+        // Write user profile data to public.profiles table for visibility in Supabase Table Editor
+        if (data.user) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              email: email,
+              role: selectedRole,
+              company_name: selectedRole === 'client' ? companyName : null,
+              corporate_title: selectedRole === 'client' ? corporateTitle : null,
+              project_budget: selectedRole === 'client' ? (parseFloat(projectBudget) || null) : null,
+              full_name: selectedRole === 'developer' ? fullName : null,
+              key_skills: selectedRole === 'developer' ? keySkills : null,
+              experience_level: selectedRole === 'developer' ? experienceLevel : null,
+              portfolio_link: selectedRole === 'developer' ? portfolioLink : null
+            });
+          if (profileError) {
+            console.error('Error creating public profile entry:', profileError.message);
+          }
+        }
         
         if (data.session) {
           onAuthSuccess(data.session);
