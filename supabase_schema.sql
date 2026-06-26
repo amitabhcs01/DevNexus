@@ -200,3 +200,13 @@ USING (true);
 CREATE POLICY "Allow update for profile owners" 
 ON public.profiles FOR UPDATE 
 USING (auth.uid() = id);
+
+-- Seed default profiles for demonstration
+INSERT INTO public.profiles (id, email, role, company_name, corporate_title, project_budget, full_name, key_skills, experience_level, portfolio_link)
+VALUES
+('00000000-0000-0000-0000-000000000001', 'admin@devnexus.local', 'admin', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+('00000000-0000-0000-0000-000000000002', 'client@devnexus.local', 'client', 'Nexus Capital', 'Managing Partner', 150000, NULL, NULL, NULL, NULL),
+('00000000-0000-0000-0000-000000000003', 'developer@devnexus.local', 'developer', NULL, NULL, NULL, 'Alex Rivers', 'React, WebRTC, Node.js', 'senior', 'https://github.com/alexrivers'),
+('00000000-0000-0000-0000-000000000004', 'chloe.zhao@devnexus.local', 'developer', NULL, NULL, NULL, 'Chloe Zhao', 'React, Next.js, Framer Motion', 'senior', 'https://github.com/chloez-design'),
+('00000000-0000-0000-0000-000000000005', 'john.founder@acme.com', 'client', 'Acme Corp', 'CEO & Founder', 35000, NULL, NULL, NULL, NULL)
+ON CONFLICT (id) DO NOTHING;

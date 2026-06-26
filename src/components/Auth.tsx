@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
-import { Shield, Lock, Mail, ArrowRight, KeyRound, AlertTriangle, Building, Code, User, DollarSign, Layers, Globe } from 'lucide-react';
+import { Shield, Mail, ArrowRight, KeyRound, Building, Code, User, DollarSign, Layers, Globe } from 'lucide-react';
 
 interface AuthProps {
   onAuthSuccess: (session: any) => void;
@@ -143,12 +143,7 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
     }
   };
 
-  const handleGuestAccess = () => {
-    // Authenticate as a temporary local guest
-    const guestSession = { user: { id: 'guest-id', email: 'guest@devnexus.local', user_metadata: { role: 'client' } }, access_token: 'guest-token' };
-    localStorage.setItem('devnexus-auth-session', JSON.stringify(guestSession));
-    onAuthSuccess(guestSession);
-  };
+
 
   const inputStyle = {
     width: '100%',
@@ -206,28 +201,7 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           </p>
         </div>
 
-        {/* Local warning banner */}
-        {!isSupabaseConfigured && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '10px',
-            background: 'rgba(245, 158, 11, 0.08)',
-            border: '1px solid rgba(245, 158, 11, 0.2)',
-            borderRadius: '8px',
-            padding: '12px',
-            marginBottom: '24px',
-            fontSize: '12px',
-            color: '#f59e0b',
-            lineHeight: 1.4
-          }}>
-            <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: '1px' }} />
-            <div>
-              <strong>Local Sandbox Mode Active</strong>
-              <p style={{ opacity: 0.8, marginTop: '2px' }}>Supabase variables are missing. Logins will simulate locally. Use Guest Access to test.</p>
-            </div>
-          </div>
-        )}
+
 
         {/* Error / Success Notifications */}
         {errorMsg && (
@@ -483,68 +457,7 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           </button>
         </form>
 
-        {/* Separator */}
-        <div style={{ display: 'flex', alignItems: 'center', margin: '24px 0', color: '#64748b', fontSize: '11px' }}>
-          <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.05)' }} />
-          <span style={{ padding: '0 12px' }}>OR</span>
-          <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.05)' }} />
-        </div>
 
-        {/* Guest access */}
-        <button
-          onClick={handleGuestAccess}
-          style={{
-            width: '100%',
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            color: '#cbd5e1',
-            padding: '10px',
-            borderRadius: '8px',
-            fontSize: '13px',
-            fontWeight: 500,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '6px',
-            transition: 'border-color 0.2s ease'
-          }}
-        >
-          <Lock size={14} /> Explore in Guest Mode
-        </button>
-
-        {/* Pre-created Credentials Panel */}
-        <div style={{
-          marginTop: '24px',
-          background: 'rgba(255, 255, 255, 0.02)',
-          border: '1px solid rgba(255, 255, 255, 0.05)',
-          borderRadius: '10px',
-          padding: '16px',
-          fontSize: '12px',
-          color: '#94a3b8'
-        }}>
-          <div style={{ fontWeight: 600, color: '#f8fafc', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '11px' }}>Pre-Created Test Accounts:</div>
-          <div style={{ display: 'grid', gap: '10px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>🔑 <strong>Admin</strong>: admin@devnexus.local</span>
-              <button type="button" onClick={() => { setEmail('admin@devnexus.local'); setPassword('AdminPasswordSecure123!'); }} style={{ background: 'none', border: 'none', color: '#60a5fa', cursor: 'pointer', fontSize: '11.5px', textDecoration: 'underline', fontWeight: 600 }}>Auto-Fill</button>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>🏢 <strong>Client</strong>: client@devnexus.local</span>
-              <button type="button" onClick={() => { setEmail('client@devnexus.local'); setPassword('ClientPasswordSecure123!'); }} style={{ background: 'none', border: 'none', color: '#60a5fa', cursor: 'pointer', fontSize: '11.5px', textDecoration: 'underline', fontWeight: 600 }}>Auto-Fill</button>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>💻 <strong>Developer</strong>: developer@devnexus.local</span>
-              <button type="button" onClick={() => { setEmail('developer@devnexus.local'); setPassword('DeveloperPasswordSecure123!'); }} style={{ background: 'none', border: 'none', color: '#60a5fa', cursor: 'pointer', fontSize: '11.5px', textDecoration: 'underline', fontWeight: 600 }}>Auto-Fill</button>
-            </div>
-          </div>
-          <div style={{ marginTop: '10px', fontSize: '10.5px', color: '#64748b', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '8px' }}>
-            Passwords respectively: <br />
-            <code style={{ color: '#a5b4fc', display: 'block', marginTop: '3px' }}>AdminPasswordSecure123!</code>
-            <code style={{ color: '#a5b4fc', display: 'block' }}>ClientPasswordSecure123!</code>
-            <code style={{ color: '#a5b4fc', display: 'block' }}>DeveloperPasswordSecure123!</code>
-          </div>
-        </div>
 
         {/* View Switcher */}
         <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '13px', color: '#64748b' }}>
