@@ -1,0 +1,258 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+
+:root {
+  --bg-primary: #080c14;
+  --bg-secondary: #0e1422;
+  --bg-tertiary: #161e30;
+  --card-bg: rgba(14, 20, 34, 0.65);
+  --card-border: rgba(255, 255, 255, 0.05);
+  --card-hover-border: rgba(59, 130, 246, 0.25);
+  
+  --accent-blue: #3b82f6;
+  --accent-blue-glow: rgba(59, 130, 246, 0.15);
+  --accent-green: #10b981;
+  --accent-green-glow: rgba(16, 185, 129, 0.15);
+  --accent-purple: #8b5cf6;
+  --accent-purple-glow: rgba(139, 92, 246, 0.15);
+  --accent-orange: #f97316;
+  --accent-orange-glow: rgba(249, 115, 22, 0.15);
+  
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  
+  --sidebar-width: 280px;
+  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-blue);
+}
+
+/* Glassmorphism Cards */
+.glass-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  transition: var(--transition-smooth);
+}
+
+.glass-card:hover {
+  border-color: var(--card-hover-border);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+}
+
+/* Interactive Grid Background */
+.bg-grid {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-image: 
+    linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: center center;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.bg-radial {
+  position: fixed;
+  top: -20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80vw;
+  height: 80vh;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Animations */
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.5;
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.1);
+  }
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 25px rgba(59, 130, 246, 0.3);
+  }
+}
+
+.pulse-glow-blue {
+  animation: pulseGlow 3s infinite;
+}
+
+/* Shimmer Effect */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.03) 20%,
+    rgba(255, 255, 255, 0.08) 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: shimmer 2.5s infinite;
+  content: '';
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Matrix Code Purge Animation */
+@keyframes matrix {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 0% 1000%;
+  }
+}
+
+.matrix-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(rgba(0, 0, 0, 0.95), rgba(0, 0, 0, 0.95)), 
+              url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='240' viewBox='0 0 120 240'%3E%3Ctext x='10' y='20' fill='%2300ff00' font-family='monospace' font-size='10' opacity='0.3'%3E1010101010%3C/text%3E%3Ctext x='40' y='50' fill='%2300ff00' font-family='monospace' font-size='12' opacity='0.15'%3E0101010%3C/text%3E%3Ctext x='70' y='80' fill='%2300ff00' font-family='monospace' font-size='11' opacity='0.25'%3E1100110%3C/text%3E%3Ctext x='20' y='120' fill='%2300ff00' font-family='monospace' font-size='9' opacity='0.2'%3E001101%3C/text%3E%3Ctext x='80' y='150' fill='%2300ff00' font-family='monospace' font-size='13' opacity='0.35'%3E101001%3C/text%3E%3Ctext x='30' y='190' fill='%2300ff00' font-family='monospace' font-size='10' opacity='0.1'%3E011011%3C/text%3E%3Ctext x='60' y='220' fill='%2300ff00' font-family='monospace' font-size='12' opacity='0.4'%3E100101%3C/text%3E%3C/svg%3E");
+  background-size: 120px 240px;
+  animation: matrix 20s linear infinite;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #10b981;
+  font-family: 'Fira Code', monospace;
+  text-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+}
+
+/* Custom Scrollbar for inner components */
+.custom-scroll {
+  overflow-y: auto;
+}
+.custom-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: var(--bg-tertiary);
+  border-radius: 10px;
+}
+.custom-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-blue);
+}
+
+/* Button Glow Effects */
+.btn-glow-blue {
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+  transition: var(--transition-smooth);
+}
+.btn-glow-blue:hover {
+  box-shadow: 0 0 25px rgba(59, 130, 246, 0.6);
+  transform: translateY(-1px);
+}
+
+.btn-glow-purple {
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
+  transition: var(--transition-smooth);
+}
+.btn-glow-purple:hover {
+  box-shadow: 0 0 25px rgba(139, 92, 246, 0.6);
+  transform: translateY(-1px);
+}
+
+.btn-glow-green {
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+  transition: var(--transition-smooth);
+}
+.btn-glow-green:hover {
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.6);
+  transform: translateY(-1px);
+}
+
+/* Signature Drawing Canvas */
+.sig-canvas {
+  background-color: #0b0f19;
+  border: 1px dashed var(--accent-blue);
+  border-radius: 8px;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+/* Tech stack nodes */
+.node-circle {
+  transition: var(--transition-smooth);
+  cursor: pointer;
+}
+.node-circle:hover {
+  filter: drop-shadow(0 0 8px currentColor);
+}
+.node-link {
+  transition: var(--transition-smooth);
+}
+
+/* General Layout utilities */
+.container-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  padding: 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
