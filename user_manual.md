@@ -102,15 +102,12 @@ DevNexus has been hardened with the following security measures:
 You can deploy the DevNexus frontend to production for free in less than 2 minutes using Vercel or Netlify.
 
 ### Option A: Vercel (Recommended)
-1. Install the Vercel CLI (`npm install -g vercel`) or sign up at [Vercel](https://vercel.com).
-2. Connect your GitHub repository, or deploy via command line:
-   ```bash
-   vercel
-   ```
-3. When prompted, add the following environment variables:
+1. The project includes a configured [vercel.json](file:///c:/Users/HP/OneDrive/Desktop/DevNexus/vercel.json) in the root directory. This configures Vercel to host both the Vite frontend and Node.js backend services simultaneously.
+2. Sign up at [Vercel](https://vercel.com) and import your GitHub repository, or deploy via Vercel CLI by running `vercel` in the root directory.
+3. Make sure to define the following environment variables during configuration:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
-4. Vercel will build and deploy the application, returning a production-ready `.vercel.app` URL.
+4. Vercel will build and deploy both services automatically, returning your live production URL.
 
 ### Option B: Netlify
 1. Sign in to [Netlify](https://netlify.com) and select **Import from Git**.
