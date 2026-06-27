@@ -129,6 +129,35 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           if (profileError) {
             console.error('Error creating public profile entry:', profileError.message);
           }
+
+          if (selectedRole === 'developer') {
+            const parsedSkills = keySkills
+              ? keySkills.split(',').map(s => s.trim()).filter(Boolean)
+              : [];
+            const { error: devError } = await supabase
+              .from('developers')
+              .insert({
+                id: data.user.id,
+                name: fullName || 'Anonymous Developer',
+                title: experienceLevel === 'senior' ? 'Senior Full Stack Engineer' : 'Full Stack Developer',
+                avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+                bio: 'Registered developer on DevNexus network.',
+                skills: parsedSkills,
+                hourly_rate: 120,
+                availability: 'Available Now',
+                rating: 5.0,
+                reviews_count: 0,
+                git_username: (fullName || 'dev').toLowerCase().replace(/\s+/g, '-'),
+                niche: 'SaaS Software Development',
+                verified: true
+              });
+            if (devError) {
+              console.error('Error creating developer entry:', devError.message);
+            } else {
+              const savedDev = { techStack: parsedSkills };
+              console.log("Developer saved skills:", savedDev.techStack);
+            }
+          }
         }
         
         if (data.session) {

@@ -37,6 +37,7 @@ export interface Developer {
   projectHistory: ProjectHistoryItem[];
   verified: boolean;
   niche: string;
+  techStack?: string[];
 }
 
 export interface ProjectBrief {

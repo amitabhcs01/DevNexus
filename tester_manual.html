@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevNexus - Tester Manual</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #3b82f6;
+      --dark: #0f172a;
+      --light: #f8fafc;
+      --border: #e2e8f0;
+      --text: #334155;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      line-height: 1.6;
+      background: #f1f5f9;
+      padding: 40px 20px;
+    }
+
+    .page {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 60px 80px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      border-radius: 8px;
+      position: relative;
+    }
+
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 40px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid var(--primary);
+    }
+
+    .logo-text {
+      font-family: 'Outfit', sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--dark);
+    }
+
+    .doc-type {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 700;
+      color: var(--primary);
+      background: #eff6ff;
+      padding: 4px 10px;
+      border-radius: 4px;
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 32px;
+      color: var(--dark);
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      font-size: 16px;
+      color: #64748b;
+      margin-bottom: 40px;
+    }
+
+    h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      color: var(--dark);
+      margin-top: 30px;
+      margin-bottom: 15px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+    }
+
+    p, li {
+      font-size: 14.5px;
+      color: #475569;
+      margin-bottom: 12px;
+    }
+
+    ul, ol {
+      margin-left: 20px;
+      margin-bottom: 20px;
+    }
+
+    li {
+      margin-bottom: 8px;
+    }
+
+    .step-box {
+      background: #f8fafc;
+      border-left: 4px solid var(--primary);
+      padding: 16px;
+      border-radius: 0 8px 8px 0;
+      margin: 20px 0;
+    }
+
+    .step-title {
+      font-weight: 600;
+      color: var(--dark);
+      margin-bottom: 6px;
+    }
+
+    /* Print Controls */
+    .print-controls {
+      max-width: 800px;
+      margin: 0 auto 20px auto;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .print-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);
+      transition: background 0.2s;
+    }
+
+    .print-btn:hover {
+      background: #2563eb;
+    }
+
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+      }
+      .page {
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .print-controls {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="print-controls">
+    <button class="print-btn" onclick="window.print()">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2m-12 0h12v4H6v-4z"/>
+      </svg>
+      Print to PDF
+    </button>
+  </div>
+
+  <div class="page">
+    <div class="header-bar">
+      <div class="logo-text">DevNexus</div>
+      <div class="doc-type">Staging & QA Manual</div>
+    </div>
+
+    <h1>Live Testing & QA Manual</h1>
+    <div class="subtitle">Step-by-step verification guide for DevNexus Platform operations.</div>
+
+    <h2>1. Staging Verification Overview</h2>
+    <p>This document details the exact sequence of workflow steps required to test and evaluate the B2B client and developer workspaces, AI requirements generator, and secure signaling channels.</p>
+
+    <h2>2. Phase 1: Authentication & Role Setup</h2>
+    <p>Verify role isolation and metadata settings inside the Supabase database system.</p>
+    <div class="step-box">
+      <div class="step-title">Steps to register:</div>
+      <ol>
+        <li>Open the live website URL in your browser.</li>
+        <li>Click <strong>Create Account</strong> at the bottom of the sign-in block.</li>
+        <li>Select <strong>Client / Founder</strong> to register a business client, or <strong>Vetted Developer</strong> for developer profiles.</li>
+        <li>Fill in the specific details and click <strong>Create Secured Account</strong>.</li>
+        <li>Verify that you successfully redirect to the platform and can log out.</li>
+      </ol>
+    </div>
+
+    <h2>3. Phase 2: AI Requirement Vetting</h2>
+    <p>Test the advisory hub natural language processing and PostgreSQL insertions.</p>
+    <div class="step-box">
+      <div class="step-title">Steps to verify:</div>
+      <ol>
+        <li>Select <strong>AI Advisory Hub</strong> from the left sidebar navigation menu.</li>
+        <li>Type in a requirement brief (e.g. <i>"Secure WebRTC deal room with file locker encryption keys."</i>).</li>
+        <li>Select skill tags and click <strong>Submit to AI Vetting Engine</strong>.</li>
+        <li>Verify the generated solution summary blocks (Roadmap, Cost, Risks).</li>
+      </ol>
+    </div>
+
+    <h2>4. Phase 3: Developer Registry Matching</h2>
+    <p>Ensure that developers can be selected from the graph view directory.</p>
+    <div class="step-box">
+      <div class="step-title">Steps to verify:</div>
+      <ol>
+        <li>Go to <strong>Developer Registry</strong>.</li>
+        <li>Click on skill tags to filter the registry profiles list.</li>
+        <li>Click on a profile (e.g. <i>Alex Rivers</i>) and click <strong>Open Secure Deal Room</strong>.</li>
+      </ol>
+    </div>
+
+    <h2>5. Phase 4: Secure NDA & Signature Vetting</h2>
+    <p>Sign the mutual agreement contract on the digital drawing pad.</p>
+    <div class="step-box">
+      <div class="step-title">Steps to sign:</div>
+      <ol>
+        <li>Customize the NDA parameters in the Setup tab.</li>
+        <li>Copy the generated <strong>One-Time Access Key</strong> (used by the peer to join).</li>
+        <li>Draw your digital signature on the drawing canvas.</li>
+        <li>Click <strong>Confirm & Secure Signature</strong> and wait for the room to activate.</li>
+      </ol>
+    </div>
+
+    <h2>6. Phase 5: Real-Time Deal Room Sync & Wipe</h2>
+    <p>Test real-time message relays and secure room scrubbing.</p>
+    <div class="step-box">
+      <div class="step-title">Steps to verify:</div>
+      <ol>
+        <li>Open a second Private/Incognito window and log in.</li>
+        <li>Select the <strong>Private Deal Room</strong> tab, enter the Access Key, and click Join.</li>
+        <li>Send chat messages and verify they update in real time.</li>
+        <li>Click <strong>Close & Wipe Session</strong> in either window and verify the data-scrubbing sweeping screen and SHA-256 audit hash logs.</li>
+      </ol>
+    </div>
+  </div>
+
+</body>
+</html>

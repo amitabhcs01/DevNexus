@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, Search, Star, Award, ShieldCheck, GitFork, ArrowRight, X, Cpu, Code } from 'lucide-react';
 import { mockDevelopers } from '../data/mockData';
 import type { Developer } from '../types';
+import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 interface MarketplaceProps {
   initialFilters?: { skills: string[]; budget: number } | null;
@@ -21,6 +22,75 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ initialFilters, onOpen
   const [matchingBudget, setMatchingBudget] = useState(130);
   const [isMatching, setIsMatching] = useState(false);
   const [matchedResults, setMatchedResults] = useState<{ developer: Developer; score: number; details: any }[]>([]);
+  
+  const [developersList, setDevelopersList] = useState<Developer[]>([]);
+
+  // Fetch developers from Supabase DB on mount
+  useEffect(() => {
+    const fetchDevelopers = async () => {
+      try {
+        if (!isSupabaseConfigured) {
+          // Initialize mock developers with techStack property
+          const mappedMock = mockDevelopers.map(dev => ({
+            ...dev,
+            techStack: dev.skills
+          }));
+          setDevelopersList(mappedMock);
+          return;
+        }
+
+        const { data: dbDevs, error } = await supabase
+          .from('developers')
+          .select('*');
+
+        if (error) throw error;
+
+        if (dbDevs && dbDevs.length > 0) {
+          // Log total developers in DB to satisfy Step 2 instruction
+          console.log("Total developers in DB:", dbDevs.length);
+
+          const mappedDevs: Developer[] = dbDevs.map(d => ({
+            id: d.id,
+            name: d.name,
+            title: d.title,
+            avatar: d.avatar,
+            bio: d.bio,
+            skills: d.skills || [],
+            hourlyRate: d.hourly_rate,
+            availability: d.availability as any,
+            rating: Number(d.rating),
+            reviewsCount: d.reviews_count,
+            reviews: [],
+            gitHubUsername: d.git_username,
+            githubRepos: [],
+            projectHistory: [],
+            verified: d.verified,
+            niche: d.niche,
+            // techStack mapping for AI matcher console checks
+            techStack: d.skills || []
+          }));
+          setDevelopersList(mappedDevs);
+        } else {
+          // Log 0 count if empty
+          console.log("Total developers in DB: 0");
+          const mappedMock = mockDevelopers.map(dev => ({
+            ...dev,
+            techStack: dev.skills
+          }));
+          setDevelopersList(mappedMock);
+        }
+      } catch (err) {
+        console.error('Error fetching developers from DB, falling back to mock data:', err);
+        const mappedMock = mockDevelopers.map(dev => ({
+          ...dev,
+          techStack: dev.skills
+        }));
+        setDevelopersList(mappedMock);
+      }
+    };
+
+    fetchDevelopers();
+  }, []);
 
   // Skill Graph Node Coordinates
   const skillNodes = [
@@ -67,7 +137,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ initialFilters, onOpen
   };
 
   // Filter developers
-  const filteredDevelopers = mockDevelopers.filter(dev => {
+  const filteredDevelopers = developersList.filter(dev => {
     const matchesSearch = dev.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           dev.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           dev.bio.toLowerCase().includes(searchTerm.toLowerCase());
@@ -76,8 +146,9 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ initialFilters, onOpen
     
     const matchesAvailability = availability === 'All' || dev.availability === availability;
     
+    const devSkills = dev.skills || dev.techStack || [];
     const matchesSkills = selectedSkills.length === 0 || 
-                          selectedSkills.every(skill => dev.skills.includes(skill));
+                          selectedSkills.every(skill => devSkills.some(s => s.toLowerCase() === skill.toLowerCase()));
 
     return matchesSearch && matchesRate && matchesAvailability && matchesSkills;
   });
@@ -92,9 +163,19 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ initialFilters, onOpen
     setMatchedResults([]);
 
     setTimeout(() => {
-      const results = mockDevelopers.map(dev => {
-        // 1. Skills score (40%)
-        const matchedSkills = matchingStack.filter(s => dev.skills.includes(s));
+      // Log developers entering the scoring pipeline to satisfy Step 4 instruction
+      developersList.forEach(dev => {
+        dev.techStack = dev.techStack || dev.skills || [];
+        console.log(`Scoring: ${dev.name} | Skills: ${dev.techStack}`);
+      });
+
+      const results = developersList.map(dev => {
+        const devSkills = dev.skills || dev.techStack || [];
+
+        // 1. Skills score (40%) - Case-insensitive match using s.some
+        const matchedSkills = matchingStack.filter(reqSkill => 
+          devSkills.some(s => s.toLowerCase() === reqSkill.toLowerCase())
+        );
         const skillScore = matchingStack.length > 0 ? (matchedSkills.length / matchingStack.length) * 100 : 0;
 
         // 2. Rating score (25%)
