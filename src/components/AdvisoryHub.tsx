@@ -11,83 +11,90 @@ interface AdvisoryHubProps {
 const compileAdvisoryReport = (inputQuery: string): ProjectBrief => {
   const queryLower = inputQuery.toLowerCase();
   
+  // Extract and clean name
+  const cleanTitle = inputQuery.trim()
+    .split(' ')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+  const titleClean = cleanTitle.length > 50 ? cleanTitle.substring(0, 50) + '...' : cleanTitle;
+
   // Default values
-  let title = 'Custom Enterprise SaaS Solution';
-  let overview = 'A scalable, microservices-oriented B2B SaaS application designed to automate business workflows, handle authenticated user workspaces, and provide real-time transaction tracking.';
+  let title = `${titleClean} — Advisory Report`;
+  let overview = `A specialized technical architecture custom-tailored for the "${titleClean}" platform request. The system implements a modern, secure microservice blueprint designed to support robust domain-specific workflows and transaction flows.`;
   let techStack = ['React', 'TypeScript', 'Node.js', 'PostgreSQL', 'Docker', 'Redis'];
-  let estimatedCost = '$20,000 - $35,000';
-  let estimatedTimeline = '6 - 8 weeks';
+  let estimatedCost = '$22,000 - $38,000';
+  let estimatedTimeline = '6 - 10 weeks';
   
   let pros = [
-    'Highly modular microservices architecture allows individual service scaling and high availability.',
-    'Modern React + TypeScript frontend guarantees exceptional developer velocity and component reusability.',
-    'PostgreSQL relational schema ensures strict transactional integrity for business-critical ledger actions.'
+    `Highly scalable domain model specifically optimized for ${titleClean} operations.`,
+    'Modern React + TypeScript frontend structure guarantees high developer velocity and interface performance.',
+    'Decoupled client-server architecture allows independent horizontal scaling of frontend assets and database writes.'
   ];
   
   let cons = [
-    'Increased initial development overhead compared to a traditional monolithic framework deployment.',
-    'Requires robust end-to-end integration test suites to monitor distributed API handshake latencies.',
-    'Continuous caching layer (Redis) synchronization is required to prevent data stale indicators.'
+    `Requires highly granular access control checks to protect sensitive ${titleClean} user profiles.`,
+    'System-wide reporting workflows require optimized secondary read-replicas to prevent main database locks.',
+    'Establishing clean cross-component state updates introduces front-end complexity.'
   ];
   
   let crossIdeas = [
-    { title: 'Serverless Edge Orchestrator', explanation: 'Deploying latency-sensitive validation code to Cloudflare Workers to drop worldwide RTT under 30ms.' },
-    { title: 'Decoupled Client-Side Vaults', explanation: 'Applying browser-native WebCrypto modules to encrypt sensitive customer payloads before network transmission.' },
-    { title: 'OpenAPI Schema Synchronization', explanation: 'Defining contract-first REST endpoints to auto-generate client-side fetch clients and TypeScript declarations.' }
+    { title: `Serverless ${titleClean.replace(/\s+/g, '')} Workers`, explanation: `Deploying key gateway handlers to edge workers to minimize global RTT and latency for all ${titleClean} locations.` },
+    { title: 'Zero-Knowledge Compliance Vault', explanation: 'Using client-side cryptosystems to store sensitive customer payloads without exposing them to database files.' },
+    { title: 'OpenAPI-Driven API Clients', explanation: 'Generating type-safe client fetching packages directly from shared spec files to ensure API alignment.' }
   ];
   
   let phase1 = {
-    title: 'Phase 1 — MVP & Core Database Scaffold',
+    title: `Phase 1 — MVP & Core ${titleClean} Scaffold`,
     features: [
-      'Implement JWT/OAuth user authentication and session cookies.',
-      'Scaffold Postgres tables with RLS (Row Level Security) rules.',
-      'Establish primary API gateways and REST routing layers.'
+      `Implement basic role-based user logins and secure workspace controls.`,
+      `Design Postgres tables mapping core workflows for ${titleClean}.`,
+      `Establish primary database reads and write gateways.`
     ],
     techStack: ['React', 'TypeScript', 'Express', 'Supabase']
   };
   
   let phase2 = {
-    title: 'Phase 2 — Real-time Sockets & Cache Buffers',
+    title: 'Phase 2 — Real-time Events & Cache Optimizations',
     features: [
-      'Integrate Redis memory stores to cache database query volumes.',
-      'Establish real-time signaling channels for active user updates.',
-      'Build background job queues to process async reporting requests.'
+      `Setup Redis caches to offload common query calls.`,
+      'Build real-time socket connections to broadcast live workflow alerts.',
+      'Deploy async background worker queues to process export datasets.'
     ],
     techStack: ['Redis', 'Socket.io', 'Node.js', 'Docker']
   };
   
   let phase3 = {
-    title: 'Phase 3 — Monetization & Multi-Tenant Analytics',
+    title: 'Phase 3 — Multi-Tenant Features & Integrations',
     features: [
-      'Integrate Stripe Connect logic to split vendor transaction payouts.',
-      'Establish automated tenant provisioning and isolated configurations.',
-      'Deploy visual analytics charts mapping monthly platform MRR.'
+      'Integrate Stripe Connect to handle vendor commissions and subscriptions.',
+      `Build responsive dashboards visualizing transactional KPIs.`,
+      'Deploy SOC2-compliant system monitoring logs and diagnostics.'
     ],
     techStack: ['Stripe', 'Chart.js', 'AWS ECS', 'CloudWatch']
   };
   
   let functionalRequirements = [
-    'Users must be able to log in securely and customize profile dashboards.',
-    'Administrators must retain read/write controls to monitor all tenant spaces.',
-    'The system must expose RESTful API endpoints secured by OAuth tokens.',
-    'Users must be able to export active data tables into CSV or PDF structures.',
-    'Automated email dispatchers must fire alerts upon threshold notifications.',
-    'The platform must provide real-time feed synchronization for active teams.'
+    `Users must be able to log in securely and customize profile settings.`,
+    `Administrators must be able to audit and update all platform records.`,
+    `The API must expose clean REST endpoints with JWT authorization checks.`,
+    'Users must be able to export historical reports in CSV or PDF formats.',
+    `The platform must synchronize status feeds in real-time across active sessions.`,
+    `Automated triggers must dispatch notification messages on specific state triggers.`
   ];
   
   let nonFunctionalRequirements = {
-    performance: 'API responses must compile under 200ms; sub-50ms query speeds via Redis cache pools.',
+    performance: 'API endpoints must return responses within 200ms; sub-50ms query speeds via cache pools.',
     security: 'All network paths must enforce TLS 1.3; data at rest must use AES-256-GCM encryption.',
-    scalability: 'Auto-scaling gateways must scale up to 10,000 concurrent websocket connections.',
-    availability: 'System availability must exceed 99.9% uptime metrics, backed by automated status pings.',
-    compliance: 'Fully compliant with GDPR right-to-be-forgotten rules and SOC2 data auditing guidelines.'
+    scalability: 'Gateway infrastructure must support up to 5,000 concurrent active connections.',
+    availability: 'The service must maintain 99.9% uptime SLA metrics.',
+    compliance: 'Fully GDPR compliant for user data erasure and SOC2 ready.'
   };
   
   let spinoff = {
-    name: 'LogScrub.io',
-    description: 'A lightweight serverless microservice that strips PII from server logs in real-time.',
-    useCase: 'Sanitizing production logs before they are indexed into Datadog or Loggly.',
-    uniqueness: 'Interposes at the stream layer, running regex comparisons inside edge compute buffers before logs touch physical disks.'
+    name: `${titleClean.replace(/[^a-zA-Z0-9]/g, '')}Sync`,
+    description: `A standalone event-driven synchronization gateway designed to link ${titleClean} records with external CRM systems.`,
+    useCase: `Syncing live operations with external back-office accounting platforms.`,
+    uniqueness: `Employs real-time deduplication and retry queues to resolve transactional conflicts on the fly.`
   };
 
   // Archetype 1: Secure Deal Chambers / WebRTC / Encryption
