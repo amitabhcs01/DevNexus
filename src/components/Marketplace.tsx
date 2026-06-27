@@ -39,40 +39,107 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ initialFilters, onOpen
           return;
         }
 
-        const { data: dbDevs, error } = await supabase
+        // Fetch registered developer profiles
+        const { data: dbProfiles, error: profileErr } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('role', 'developer');
+
+        // Fetch developer details registry
+        const { data: dbDevs, error: devErr } = await supabase
           .from('developers')
           .select('*');
 
-        if (error) throw error;
+        if (profileErr) throw profileErr;
+        if (devErr) {
+          console.warn('Developer table warning:', devErr.message);
+        }
 
-        if (dbDevs && dbDevs.length > 0) {
-          // Log total developers in DB to satisfy Step 2 instruction
-          console.log("Total developers in DB:", dbDevs.length);
+        // Total developers in database
+        const totalDevsCount = (dbProfiles?.length || 0) + (dbDevs?.filter(d => !dbProfiles?.some(p => p.id === d.id || p.full_name?.toLowerCase() === d.name.toLowerCase())).length || 0);
+        console.log("Total developers in DB:", totalDevsCount);
 
-          const mappedDevs: Developer[] = dbDevs.map(d => ({
-            id: d.id,
-            name: d.name,
-            title: d.title,
-            avatar: d.avatar,
-            bio: d.bio,
-            skills: d.skills || [],
-            hourlyRate: d.hourly_rate,
-            availability: d.availability as any,
-            rating: Number(d.rating),
-            reviewsCount: d.reviews_count,
-            reviews: [],
-            gitHubUsername: d.git_username,
-            githubRepos: [],
-            projectHistory: [],
-            verified: d.verified,
-            niche: d.niche,
-            // techStack mapping for AI matcher console checks
-            techStack: d.skills || []
-          }));
-          setDevelopersList(mappedDevs);
+        const mergedDevs: Developer[] = [];
+
+        // 1. Process all registered profiles
+        dbProfiles?.forEach(p => {
+          const matchedDev = dbDevs?.find(d => d.id === p.id || d.name.toLowerCase() === p.full_name?.toLowerCase());
+          const skillsList = p.key_skills
+            ? p.key_skills.split(',').map((s: string) => s.trim()).filter(Boolean)
+            : [];
+
+          if (matchedDev) {
+            mergedDevs.push({
+              id: matchedDev.id,
+              name: matchedDev.name,
+              title: matchedDev.title,
+              avatar: matchedDev.avatar,
+              bio: matchedDev.bio,
+              skills: matchedDev.skills || skillsList,
+              hourlyRate: matchedDev.hourly_rate,
+              availability: matchedDev.availability as any,
+              rating: Number(matchedDev.rating),
+              reviewsCount: matchedDev.reviews_count,
+              reviews: [],
+              gitHubUsername: matchedDev.git_username || '',
+              githubRepos: [],
+              projectHistory: [],
+              verified: matchedDev.verified,
+              niche: matchedDev.niche,
+              techStack: matchedDev.skills || skillsList
+            });
+          } else {
+            mergedDevs.push({
+              id: p.id,
+              name: p.full_name || 'Anonymous Developer',
+              title: p.experience_level === 'senior' ? 'Senior Full Stack Developer' : 'Full Stack Developer',
+              avatar: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80`,
+              bio: 'Registered developer on DevNexus network.',
+              skills: skillsList,
+              hourlyRate: 100,
+              availability: 'Available Now',
+              rating: 5.0,
+              reviewsCount: 0,
+              reviews: [],
+              gitHubUsername: p.portfolio_link ? p.portfolio_link.split('/').pop() || '' : '',
+              githubRepos: [],
+              projectHistory: [],
+              verified: true,
+              niche: 'SaaS Software Development',
+              techStack: skillsList
+            });
+          }
+        });
+
+        // 2. Include any pre-seeded developers not in profiles
+        dbDevs?.forEach(d => {
+          const alreadyIncluded = mergedDevs.some(c => c.id === d.id || c.name.toLowerCase() === d.name.toLowerCase());
+          if (!alreadyIncluded) {
+            mergedDevs.push({
+              id: d.id,
+              name: d.name,
+              title: d.title,
+              avatar: d.avatar,
+              bio: d.bio,
+              skills: d.skills || [],
+              hourlyRate: d.hourly_rate,
+              availability: d.availability as any,
+              rating: Number(d.rating),
+              reviewsCount: d.reviews_count,
+              reviews: [],
+              gitHubUsername: d.git_username || '',
+              githubRepos: [],
+              projectHistory: [],
+              verified: d.verified,
+              niche: d.niche,
+              techStack: d.skills || []
+            });
+          }
+        });
+
+        if (mergedDevs.length > 0) {
+          setDevelopersList(mergedDevs);
         } else {
-          // Log 0 count if empty
-          console.log("Total developers in DB: 0");
           const mappedMock = mockDevelopers.map(dev => ({
             ...dev,
             techStack: dev.skills
