@@ -46,9 +46,29 @@ export interface ProjectBrief {
   techStack: string[];
   estimatedCost: string;
   estimatedTimeline: string;
-  architecture: string;
-  features: string[];
-  risks: { risk: string; mitigation: string }[];
+  overview: string;
+  pros: string[];
+  cons: string[];
+  crossIdeas: { title: string; explanation: string }[];
+  implementationPlan: {
+    phase1: { title: string; features: string[]; techStack: string[] };
+    phase2: { title: string; features: string[]; techStack: string[] };
+    phase3: { title: string; features: string[]; techStack: string[] };
+  };
+  functionalRequirements: string[];
+  nonFunctionalRequirements: {
+    performance: string;
+    security: string;
+    scalability: string;
+    availability: string;
+    compliance: string;
+  };
+  spinoff: {
+    name: string;
+    description: string;
+    useCase: string;
+    uniqueness: string;
+  };
 }
 
 export interface NDA {
