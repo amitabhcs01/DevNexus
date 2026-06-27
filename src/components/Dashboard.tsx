@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TrendingUp, DollarSign, Users, ShieldAlert, CheckCircle, BarChart3, PieChart, Activity } from 'lucide-react';
 
 interface DashboardProps {
@@ -14,6 +14,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       : 'client';
 
   const [roleMode, setRoleMode] = useState<'admin' | 'client' | 'developer'>(initialRole);
+
+  useEffect(() => {
+    if (initialRole !== 'admin') {
+      setRoleMode(initialRole);
+    }
+  }, [initialRole]);
 
   // Milestone data from Pitch Deck Section 8.2
   const milestones = [
@@ -42,35 +48,37 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         </div>
 
         {/* Role Toggle Selector */}
-        <div style={{
-          background: 'rgba(255, 255, 255, 0.02)',
-          border: '1px solid rgba(255, 255, 255, 0.05)',
-          padding: '4px',
-          borderRadius: '8px',
-          display: 'flex',
-          gap: '4px'
-        }}>
-          {['admin', 'client', 'developer'].map((role) => (
-            <button
-              key={role}
-              onClick={() => setRoleMode(role as any)}
-              style={{
-                background: roleMode === role ? '#3b82f6' : 'transparent',
-                border: 'none',
-                color: roleMode === role ? '#fff' : '#64748b',
-                padding: '6px 14px',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                textTransform: 'uppercase',
-                transition: 'var(--transition-smooth)'
-              }}
-            >
-              {role}
-            </button>
-          ))}
-        </div>
+        {initialRole === 'admin' && (
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+            padding: '4px',
+            borderRadius: '8px',
+            display: 'flex',
+            gap: '4px'
+          }}>
+            {['admin', 'client', 'developer'].map((role) => (
+              <button
+                key={role}
+                onClick={() => setRoleMode(role as any)}
+                style={{
+                  background: roleMode === role ? '#3b82f6' : 'transparent',
+                  border: 'none',
+                  color: roleMode === role ? '#fff' : '#64748b',
+                  padding: '6px 14px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textTransform: 'uppercase',
+                  transition: 'var(--transition-smooth)'
+                }}
+              >
+                {role}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 1. PLATFORM ADMIN DASHBOARD */}
@@ -120,7 +128,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           </div>
 
           {/* Graphs Row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '24px', alignItems: 'start' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', alignItems: 'start' }}>
             
             {/* Project MRR Target Graph */}
             <div className="glass-card" style={{ padding: '32px' }}>
@@ -210,7 +218,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
       {/* 2. CLIENT ANALYTICS */}
       {roleMode === 'client' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px', alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', alignItems: 'start' }}>
           {/* Main client info */}
           <div className="glass-card" style={{ padding: '32px' }}>
             <h3 style={{ fontSize: '18px', marginBottom: '20px' }}>Active Contract Engagements</h3>
@@ -266,7 +274,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
       {/* 3. DEVELOPER ANALYTICS */}
       {roleMode === 'developer' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px', alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', alignItems: 'start' }}>
           
           <div className="glass-card" style={{ padding: '32px' }}>
             <h3 style={{ fontSize: '18px', marginBottom: '20px' }}>Your Earnings Summary</h3>

@@ -9,21 +9,31 @@ interface DealRoomProps {
   onNavigateToDashboard: () => void;
 }
 
-export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard }: DealRoomProps) => {
-  const [sessionState, setSessionState] = useState<'setup' | 'signed' | 'active' | 'wiped'>('setup');
+export const DealRoom = ({ defaultPartner = 'Amazon Web Services', onNavigateToDashboard }: DealRoomProps) => {
+  const [sessionState, setSessionState] = useState<'dashboard' | 'setup' | 'signed' | 'active' | 'wiped'>('dashboard');
   
+  // Custom Deal Room Registry (Pre-seeded for high fidelity)
+  const [activeRooms] = useState([
+    { code: 'NEX-MSFT-AMZN', title: 'Cloud Infrastructure Service Agreement', partyA: 'Microsoft Corporation', partyB: 'Amazon Web Services', status: 'active', date: '2026-06-25' },
+    { code: 'NEX-APPL-TSMC', title: 'Semiconductor Supply Chain Agreement', partyA: 'Apple Inc.', partyB: 'TSMC Ltd.', status: 'signed', date: '2026-06-20' }
+  ]);
+
   // Setup forms state
-  const [partyA, setPartyA] = useState('My Business Corp');
+  const [dealTitle, setDealTitle] = useState('Strategic Partnership Agreement');
+  const [partyA, setPartyA] = useState('Microsoft Corporation');
   const [partyB, setPartyB] = useState(defaultPartner);
-  const [ndaType, setNdaType] = useState('Software Design & Development Agreement');
-  const [ipClauses, setIpClauses] = useState('Assigns immediately upon project invoice settlement');
-  const [duration, setDuration] = useState('3 Years');
-  const [jurisdiction, setJurisdiction] = useState('Delaware Corporate Law');
+  const [repA, setRepA] = useState('Satya Nadella (CEO)');
+  const [repB, setRepB] = useState('Andy Jassy (CEO)');
+  const [ndaType, setNdaType] = useState('Corporate Mutual Non-Disclosure Agreement');
+  const [ipClauses, setIpClauses] = useState('All background intellectual property remains vested in original owner; foreground IP is shared equally.');
+  const [duration, setDuration] = useState('5 Years');
+  const [jurisdiction, setJurisdiction] = useState('Delaware Chancery Court');
   const [accessCode, setAccessCode] = useState('');
   
   // Signature Drawing State
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [signingAs, setSigningAs] = useState<'repA' | 'repB'>('repA');
   const [signedA, setSignedA] = useState(false);
   const [signedB, setSignedB] = useState(false);
   
@@ -31,8 +41,8 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [files, setFiles] = useState<EphemeralFile[]>([
-    { name: 'architecture_diagram.png', size: '2.4 MB', type: 'image/png', contentMock: 'Simulated blueprint image' },
-    { name: 'scope_estimate.pdf', size: '350 KB', type: 'application/pdf', contentMock: 'Estimated budget $18,500' }
+    { name: 'partnership_proposal_v1.pdf', size: '1.8 MB', type: 'application/pdf', contentMock: 'Draft terms for cloud migration collaboration. Budget: $1,200,000' },
+    { name: 'service_level_agreement_v2.docx', size: '850 KB', type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', contentMock: 'Uptime commitments and liability exclusions. Standard Delaware templates.' }
   ]);
   const [cameraActive, setCameraActive] = useState(true);
   const [micActive, setMicActive] = useState(true);
@@ -64,7 +74,7 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
             id: `sys-${Math.random()}`,
             sender: 'System',
             senderName: 'System',
-            text: `Peer joined the session. Secure signal tunnel activated.`,
+            text: `Representative from peer business connected. Secure signal tunnel verified.`,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             isEncrypted: false
           }]);
@@ -78,7 +88,7 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
         .on('broadcast', { event: 'wipe' }, ({ payload }) => {
           setSessionState('wiped');
           const logs = [
-            'Remote peer executed wipe command...',
+            'Remote peer executed cryptographic wipe command...',
             'Terminating WebRTC active sockets...',
             'Scrubbing client cache directories...',
             'Destroying session keystore rings...',
@@ -116,10 +126,10 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
   // Setup access code
   useEffect(() => {
     if (sessionState === 'signed') {
-      const code = 'NEX-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+      const code = 'NEX-' + partyA.substring(0, 4).toUpperCase() + '-' + partyB.substring(0, 4).toUpperCase();
       setAccessCode(code);
     }
-  }, [sessionState]);
+  }, [sessionState, partyA, partyB]);
 
   // Canvas Drawing Actions
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -178,25 +188,33 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    setSignedA(false);
+    if (signingAs === 'repA') setSignedA(false);
+    else setSignedB(false);
   };
 
-  const confirmSignatureA = () => {
-    setSignedA(true);
-    // Simulate Party B signing 1s later
-    setTimeout(() => {
+  const confirmSignature = () => {
+    if (signingAs === 'repA') {
+      setSignedA(true);
+      // Simulate other party signing 1s later
+      setTimeout(() => {
+        setSignedB(true);
+      }, 1200);
+    } else {
       setSignedB(true);
-    }, 1200);
+    }
   };
 
   // Chat Actions
   const sendMessage = () => {
     if (!inputText.trim()) return;
     
+    const senderName = signingAs === 'repA' ? repA : repB;
+    const senderCompany = signingAs === 'repA' ? partyA : partyB;
+
     const newMsg: ChatMessage = {
       id: Math.random().toString(),
-      sender: 'PartyA',
-      senderName: 'You (Client)',
+      sender: signingAs === 'repA' ? 'PartyA' : 'PartyB',
+      senderName: `${senderName} (${senderCompany})`,
       text: inputText,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       isEncrypted: true
@@ -210,26 +228,24 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
       channelRef.current.send({
         type: 'broadcast',
         event: 'chat',
-        payload: {
-          ...newMsg,
-          sender: 'PartyB',
-          senderName: partyA
-        }
+        payload: newMsg
       });
     } else {
-      // Simulate developer reply fallback if testing offline
+      // Simulate representative reply fallback if testing offline
       setTimeout(() => {
-        let replyText = "Yes, that stack works. I've shared the architecture brief in the File Locker.";
-        if (inputText.toLowerCase().includes('rate') || inputText.toLowerCase().includes('cost')) {
-          replyText = "My rate matches the proposal. The 15% platform commission will be auto-deducted through Stripe Connect when we settle.";
-        } else if (inputText.toLowerCase().includes('webrtc') || inputText.toLowerCase().includes('security')) {
-          replyText = "I confirm we are on a direct WebRTC network. Our messages do not pass through a central database log.";
+        const replyRep = signingAs === 'repA' ? repB : repA;
+        const replyCompany = signingAs === 'repA' ? partyB : partyA;
+        let replyText = "Understood. The proposed SLA draft has been uploaded to our Ephemeral Vault.";
+        if (inputText.toLowerCase().includes('ip') || inputText.toLowerCase().includes('clause')) {
+          replyText = "We agree to the IP allocation terms. The foreground IP splits work for our team.";
+        } else if (inputText.toLowerCase().includes('jurisdiction') || inputText.toLowerCase().includes('delaware')) {
+          replyText = "The Delaware jurisdiction is verified on our side as well.";
         }
         
         setMessages((prev: ChatMessage[]) => [...prev, {
           id: Math.random().toString(),
-          sender: 'PartyB',
-          senderName: partyB,
+          sender: signingAs === 'repA' ? 'PartyB' : 'PartyA',
+          senderName: `${replyRep} (${replyCompany})`,
           text: replyText,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           isEncrypted: true
@@ -267,8 +283,10 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
     const auditProofHash = 'SHA-256:' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('');
     const auditLogObj = {
       sessionId: accessCode,
+      dealTitle: dealTitle,
       partyA: partyA,
       partyB: partyB,
+      representatives: `${repA} & ${repB}`,
       ndaVettingType: ndaType,
       signingJurisdiction: jurisdiction,
       timestamps: {
@@ -278,7 +296,7 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
       trafficStats: {
         messagesPurged: messages.length + 3,
         filesPurged: files.length,
-        bytesWiped: '15.4 KB'
+        bytesWiped: '24.8 KB'
       },
       cryptographicProofHash: auditProofHash
     };
@@ -325,7 +343,7 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
       name: file.name,
       size: (file.size / 1024 / 1024).toFixed(1) + ' MB',
       type: file.type || 'unknown',
-      contentMock: 'User uploaded custom content'
+      contentMock: 'User uploaded custom deal document'
     };
     
     setFiles((prev: EphemeralFile[]) => [...prev, newFile]);
@@ -343,7 +361,7 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
       id: Math.random().toString(),
       sender: 'System',
       senderName: 'System',
-      text: `File "${file.name}" uploaded and encrypted in local session state.`,
+      text: `Proposal document "${file.name}" uploaded and encrypted in local session buffer.`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       isEncrypted: true
     }]);
@@ -372,7 +390,7 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
           id: 'sys-2',
           sender: 'System',
           senderName: 'System',
-          text: `Direct handshake established with peer: ${partyB}`,
+          text: `Direct handshake established between ${repA} & ${repB}.`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           isEncrypted: false
         },
@@ -380,7 +398,7 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
           id: 'sys-3',
           sender: 'System',
           senderName: 'System',
-          text: `Asymmetric ECDH key exchange complete. Tunnel encrypted via AES-256-GCM. No data is stored.`,
+          text: `Asymmetric ECDH key exchange complete. Tunnel encrypted via AES-256-GCM. Session history is unlogged.`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           isEncrypted: true
         }
@@ -388,17 +406,166 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
     }
   }, [sessionState]);
 
+  const handleJoinRoom = (code: string) => {
+    const room = activeRooms.find(r => r.code === code);
+    if (room) {
+      setDealTitle(room.title);
+      setPartyA(room.partyA);
+      setPartyB(room.partyB);
+      setAccessCode(room.code);
+      setSessionState('signed');
+    } else {
+      const codeClean = code.trim().toUpperCase();
+      if (codeClean.length > 5) {
+        setAccessCode(codeClean);
+        setSessionState('signed');
+      } else {
+        alert('Invalid access key format.');
+      }
+    }
+  };
+
   return (
     <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
       
+      {/* 0. B2B DASHBOARD / CONTROL PANEL */}
+      {sessionState === 'dashboard' && (
+        <div style={{ display: 'grid', gap: '32px' }}>
+          
+          {/* Welcome Dashboard Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+            <div>
+              <h2 style={{ fontSize: '24px', marginBottom: '4px' }}>B2B Deal Rooms</h2>
+              <p style={{ color: '#94a3b8', fontSize: '13.5px' }}>Construct agreements, co-sign with partners, and enter secure WebRTC rooms to exchange bids.</p>
+            </div>
+            
+            <button
+              onClick={() => setSessionState('setup')}
+              className="btn-glow-purple"
+              style={{
+                background: '#8b5cf6',
+                border: 'none',
+                color: '#fff',
+                padding: '12px 24px',
+                borderRadius: '8px',
+                fontWeight: 600,
+                fontSize: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer'
+              }}
+            >
+              Create New Deal Room <ArrowRight size={16} />
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '32px', alignItems: 'start' }}>
+            
+            {/* Active Rooms Listing */}
+            <div className="glass-card" style={{ padding: '24px' }}>
+              <h3 style={{ fontSize: '16px', marginBottom: '16px', color: '#cbd5e1' }}>Your Active Deal Chambers</h3>
+              <div style={{ display: 'grid', gap: '16px' }}>
+                {activeRooms.map((room, idx) => (
+                  <div 
+                    key={idx}
+                    style={{
+                      background: 'rgba(255,255,255,0.01)',
+                      border: '1px solid rgba(255,255,255,0.04)',
+                      borderRadius: '10px',
+                      padding: '20px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '16px'
+                    }}
+                  >
+                    <div>
+                      <h4 style={{ fontSize: '15px', color: '#f8fafc', marginBottom: '4px' }}>{room.title}</h4>
+                      <span style={{ fontSize: '12px', color: '#64748b' }}>
+                        {room.partyA} ↔ {room.partyB} • Access Code: <strong style={{ color: '#a78bfa' }}>{room.code}</strong>
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleJoinRoom(room.code)}
+                      style={{
+                        background: 'rgba(139, 92, 246, 0.1)',
+                        border: '1px solid rgba(139, 92, 246, 0.2)',
+                        color: '#a78bfa',
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        fontSize: '12.5px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'var(--transition-smooth)'
+                      }}
+                    >
+                      Connect Room
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Join Room Panel */}
+            <div className="glass-card" style={{ padding: '24px' }}>
+              <h3 style={{ fontSize: '16px', marginBottom: '8px', color: '#cbd5e1' }}>Join Private Chamber</h3>
+              <p style={{ color: '#64748b', fontSize: '12.5px', marginBottom: '16px', lineHeight: 1.4 }}>
+                Enter the unique, single-session access key provided by your partner business to connect directly to the encryption tunnel.
+              </p>
+              
+              <div style={{ display: 'grid', gap: '12px' }}>
+                <input
+                  type="text"
+                  placeholder="e.g. NEX-ABCD-EFGH"
+                  id="join-code-input"
+                  style={{
+                    width: '100%',
+                    background: '#080c14',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '6px',
+                    padding: '10px',
+                    color: '#fff',
+                    fontSize: '14px',
+                    fontFamily: 'monospace',
+                    outline: 'none'
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    const inputVal = (document.getElementById('join-code-input') as HTMLInputElement)?.value;
+                    if (inputVal) handleJoinRoom(inputVal);
+                    else alert('Please enter an access key.');
+                  }}
+                  className="btn-glow-blue"
+                  style={{
+                    background: '#3b82f6',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '10px',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Verify & Enter Room
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 1. SETUP PHASE */}
       {sessionState === 'setup' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '32px', alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '32px', alignItems: 'start' }}>
           
           {/* Left NDA Document Panel */}
           <div className="glass-card" style={{ padding: '32px', borderLeft: '4px solid #8b5cf6' }}>
             <span style={{ fontSize: '11px', fontWeight: 600, color: '#8b5cf6', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Secure B2B Deal Room</span>
-            <h2 style={{ fontSize: '24px', marginTop: '4px', marginBottom: '24px' }}>AI NDA & Agreement Generator</h2>
+            <h2 style={{ fontSize: '24px', marginTop: '4px', marginBottom: '24px' }}>AI NDA & Agreement Builder</h2>
             
             <div style={{
               background: '#080c14',
@@ -417,28 +584,28 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
                 MUTUAL NON-DISCLOSURE & PROPRIETARY INFORMATION AGREEMENT
               </h3>
               <p style={{ marginBottom: '12px' }}>
-                This Agreement is entered into on this <strong>{new Date().toLocaleDateString()}</strong> (the "Effective Date"), by and between:
+                This Agreement is entered into on this <strong>{new Date().toLocaleDateString()}</strong> (the "Effective Date"), by and between the corporate entities:
               </p>
               <p style={{ marginBottom: '12px', color: '#cbd5e1' }}>
-                <strong>Client Party:</strong> {partyA || '(Specify Client name)'}
+                <strong>Party A Disclosing Entity:</strong> {partyA || '(Specify Party A name)'} (represented by {repA})
               </p>
               <p style={{ marginBottom: '12px', color: '#cbd5e1' }}>
-                <strong>Builder Party:</strong> {partyB || '(Specify Developer name)'}
+                <strong>Party B Disclosing Entity:</strong> {partyB || '(Specify Party B name)'} (represented by {repB})
               </p>
               
-              <h4 style={{ color: '#cbd5e1', fontSize: '15px', marginTop: '20px', marginBottom: '8px', fontFamily: 'inherit' }}>1. Purpose & Definition</h4>
+              <h4 style={{ color: '#cbd5e1', fontSize: '15px', marginTop: '20px', marginBottom: '8px', fontFamily: 'inherit' }}>1. Scope & Purpose of Deal Room</h4>
               <p style={{ marginBottom: '12px' }}>
-                The parties wish to explore a business opportunity in connection with <strong>{ndaType}</strong>. In connection with this opportunity, the Disclosing Party may share proprietary and trade secret technical specifications, code bases, flow diagrams, and credentials.
+                The parties wish to explore a business opportunity in connection with the deal title: <strong>{dealTitle}</strong> and document class: <strong>{ndaType}</strong>. In connection with this opportunity, both parties may exchange proprietary, confidential financial data, trade secrets, and system blueprints.
               </p>
               
-              <h4 style={{ color: '#cbd5e1', fontSize: '15px', marginTop: '20px', marginBottom: '8px', fontFamily: 'inherit' }}>2. Intellectual Property & Code Rights</h4>
+              <h4 style={{ color: '#cbd5e1', fontSize: '15px', marginTop: '20px', marginBottom: '8px', fontFamily: 'inherit' }}>2. Intellectual Property & Technology Ownership</h4>
               <p style={{ marginBottom: '12px' }}>
-                All proprietary source codes, assets, and documentation shall remain the sole property of the Client. The developer agrees that IP transfers under the following conditions: <strong style={{ color: '#60a5fa' }}>{ipClauses}</strong>.
+                All background intellectual property, custom assets, and source codes shall remain the sole property of the original owners. Custom codes and outcomes developed under the partnership assign under the clause: <strong style={{ color: '#60a5fa' }}>{ipClauses}</strong>.
               </p>
               
               <h4 style={{ color: '#cbd5e1', fontSize: '15px', marginTop: '20px', marginBottom: '8px', fontFamily: 'inherit' }}>3. Confidentiality Obligations</h4>
               <p style={{ marginBottom: '12px' }}>
-                The Receiving Party agrees to hold all confidential items in strict confidence and shall not disclose them to third parties without prior written consent. This obligation shall endure for a duration of <strong style={{ color: '#60a5fa' }}>{duration}</strong> following session closure.
+                Both parties agree to hold all shared items in strict confidence and shall not disclose them to third parties without prior written consent. This obligation shall endure for a duration of <strong style={{ color: '#60a5fa' }}>{duration}</strong> following session closure.
               </p>
 
               <h4 style={{ color: '#cbd5e1', fontSize: '15px', marginTop: '20px', marginBottom: '8px', fontFamily: 'inherit' }}>4. Governing Law & Jurisdiction</h4>
@@ -448,24 +615,70 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
             </div>
 
             {/* Signature Area */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '24px', marginBottom: '20px' }}>
+              <div style={{
+                background: 'rgba(255,255,255,0.01)',
+                border: '1px solid rgba(255,255,255,0.04)',
+                borderRadius: '8px',
+                padding: '12px'
+              }}>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>SIGNING ROLE SELECTOR</span>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                  <button 
+                    onClick={() => setSigningAs('repA')} 
+                    style={{
+                      flex: 1,
+                      background: signingAs === 'repA' ? '#8b5cf6' : 'rgba(255,255,255,0.03)',
+                      color: '#fff',
+                      border: 'none',
+                      padding: '6px',
+                      borderRadius: '4px',
+                      fontSize: '11.5px',
+                      cursor: 'pointer',
+                      fontWeight: 600
+                    }}
+                  >
+                    Act as {partyA.substring(0,10)}...
+                  </button>
+                  <button 
+                    onClick={() => setSigningAs('repB')}
+                    style={{
+                      flex: 1,
+                      background: signingAs === 'repB' ? '#8b5cf6' : 'rgba(255,255,255,0.03)',
+                      color: '#fff',
+                      border: 'none',
+                      padding: '6px',
+                      borderRadius: '4px',
+                      fontSize: '11.5px',
+                      cursor: 'pointer',
+                      fontWeight: 600
+                    }}
+                  >
+                    Act as {partyB.substring(0,10)}...
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '24px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '12px', color: '#cbd5e1', fontWeight: 600, marginBottom: '8px' }}>
-                  Client Authorized Signature ({partyA})
+                  Party A Signature Pad ({repA})
                 </label>
                 <div style={{ position: 'relative' }}>
                   <canvas
-                    ref={canvasRef}
+                    ref={signingAs === 'repA' ? canvasRef : null}
                     width={320}
                     height={120}
                     className="sig-canvas"
-                    onMouseDown={startDrawing}
-                    onMouseMove={draw}
-                    onMouseUp={stopDrawing}
-                    onMouseLeave={stopDrawing}
-                    onTouchStart={startDrawing}
-                    onTouchMove={draw}
-                    onTouchEnd={stopDrawing}
+                    onMouseDown={signingAs === 'repA' ? startDrawing : undefined}
+                    onMouseMove={signingAs === 'repA' ? draw : undefined}
+                    onMouseUp={signingAs === 'repA' ? stopDrawing : undefined}
+                    onMouseLeave={signingAs === 'repA' ? stopDrawing : undefined}
+                    onTouchStart={signingAs === 'repA' ? startDrawing : undefined}
+                    onTouchMove={signingAs === 'repA' ? draw : undefined}
+                    onTouchEnd={signingAs === 'repA' ? stopDrawing : undefined}
+                    style={{ pointerEvents: signingAs === 'repA' ? 'auto' : 'none', opacity: signingAs === 'repA' ? 1 : 0.4 }}
                   />
                   {signedA && (
                     <div style={{
@@ -482,21 +695,21 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
                       fontWeight: 600,
                       gap: '8px'
                     }}>
-                      <CheckCircle size={18} /> Signature Confirmed
+                      <CheckCircle size={18} /> Representative A Signed
                     </div>
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
                   <button
                     onClick={clearCanvas}
-                    disabled={signedA}
+                    disabled={signedA && signingAs === 'repA'}
                     style={{ background: 'rgba(255,255,255,0.05)', color: '#94a3b8', border: 'none', padding: '6px 12px', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}
                   >
                     Clear
                   </button>
                   <button
-                    onClick={confirmSignatureA}
-                    disabled={signedA}
+                    onClick={confirmSignature}
+                    disabled={signedA && signingAs === 'repA'}
                     style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '6px 16px', borderRadius: '4px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
                   >
                     Lock Signature
@@ -506,33 +719,79 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
 
               <div>
                 <label style={{ display: 'block', fontSize: '12px', color: '#cbd5e1', fontWeight: 600, marginBottom: '8px' }}>
-                  Builder Authorized Signature ({partyB})
+                  Party B Signature Pad ({repB})
                 </label>
-                <div style={{
-                  height: '120px',
-                  border: '1px dashed rgba(255,255,255,0.1)',
-                  borderRadius: '8px',
-                  background: '#0b0f19',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#64748b',
-                  fontSize: '13px'
-                }}>
-                  {signedB ? (
-                    <div style={{ color: '#a78bfa', fontFamily: 'cursive', fontSize: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                      <span>{partyB}</span>
-                      <span style={{ fontSize: '10px', fontFamily: 'sans-serif', color: '#64748b' }}>Co-signed cryptographically</span>
+                <div style={{ position: 'relative' }}>
+                  <canvas
+                    ref={signingAs === 'repB' ? canvasRef : null}
+                    width={320}
+                    height={120}
+                    className="sig-canvas"
+                    onMouseDown={signingAs === 'repB' ? startDrawing : undefined}
+                    onMouseMove={signingAs === 'repB' ? draw : undefined}
+                    onMouseUp={signingAs === 'repB' ? stopDrawing : undefined}
+                    onMouseLeave={signingAs === 'repB' ? stopDrawing : undefined}
+                    onTouchStart={signingAs === 'repB' ? startDrawing : undefined}
+                    onTouchMove={signingAs === 'repB' ? draw : undefined}
+                    onTouchEnd={signingAs === 'repB' ? stopDrawing : undefined}
+                    style={{ pointerEvents: signingAs === 'repB' ? 'auto' : 'none', opacity: signingAs === 'repB' ? 1 : 0.4 }}
+                  />
+                  {signedB && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      background: 'rgba(14, 20, 34, 0.9)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#a78bfa',
+                      fontWeight: 600,
+                      gap: '8px'
+                    }}>
+                      <CheckCircle size={18} /> Representative B Co-signed
                     </div>
-                  ) : (
-                    <span>Awaiting client signature...</span>
                   )}
+                </div>
+                <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+                  <button
+                    onClick={clearCanvas}
+                    disabled={signedB && signingAs === 'repB'}
+                    style={{ background: 'rgba(255,255,255,0.05)', color: '#94a3b8', border: 'none', padding: '6px 12px', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}
+                  >
+                    Clear
+                  </button>
+                  <button
+                    onClick={confirmSignature}
+                    disabled={signedB && signingAs === 'repB'}
+                    style={{ background: '#8b5cf6', color: '#fff', border: 'none', padding: '6px 16px', borderRadius: '4px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Lock Signature
+                  </button>
                 </div>
               </div>
             </div>
 
             {signedA && signedB && (
-              <div style={{ marginTop: '24px', textAlign: 'right' }}>
+              <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'space-between' }}>
+                <button
+                  onClick={() => setSessionState('dashboard')}
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    color: '#94a3b8',
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    fontWeight: 600,
+                    fontSize: '14px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ← Back to Dashboard
+                </button>
+                
                 <button
                   onClick={() => setSessionState('signed')}
                   className="btn-glow-purple"
@@ -558,11 +817,21 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
 
           {/* Right Parameters Options */}
           <div className="glass-card" style={{ padding: '24px' }}>
-            <h3 style={{ fontSize: '16px', marginBottom: '16px' }}>NDA Parameters</h3>
+            <h3 style={{ fontSize: '16px', marginBottom: '16px' }}>Deal Specifications</h3>
             
             <div style={{ display: 'grid', gap: '16px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>Client Legal Entity</label>
+                <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>Deal Agreement Title</label>
+                <input
+                  type="text"
+                  value={dealTitle}
+                  onChange={(e) => setDealTitle(e.target.value)}
+                  style={{ width: '100%', background: '#080c14', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '6px', color: '#fff', fontSize: '13px' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>Party A Legal Name</label>
                 <input
                   type="text"
                   value={partyA}
@@ -572,7 +841,17 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>Builder Entity</label>
+                <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>Representative A</label>
+                <input
+                  type="text"
+                  value={repA}
+                  onChange={(e) => setRepA(e.target.value)}
+                  style={{ width: '100%', background: '#080c14', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '6px', color: '#fff', fontSize: '13px' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>Party B Legal Name</label>
                 <input
                   type="text"
                   value={partyB}
@@ -582,33 +861,40 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>Deal Scope Type</label>
+                <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>Representative B</label>
+                <input
+                  type="text"
+                  value={repB}
+                  onChange={(e) => setRepB(e.target.value)}
+                  style={{ width: '100%', background: '#080c14', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '6px', color: '#fff', fontSize: '13px' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>NDA Document Type</label>
                 <select
                   value={ndaType}
                   onChange={(e) => setNdaType(e.target.value)}
                   style={{ width: '100%', background: '#080c14', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '6px', color: '#fff', fontSize: '13px' }}
                 >
-                  <option value="Software Design & Development Agreement">Software Project Development</option>
-                  <option value="Investment Pitch & Financial Diligence Review">Seed Round Diligence</option>
-                  <option value="System Security Audit & Compliance Advisory">Security Vetting Review</option>
+                  <option value="Corporate Mutual Non-Disclosure Agreement">Mutual NDA Agreement</option>
+                  <option value="Joint Venture Diligence & Partnership Agreement">JV Partnership Deal</option>
+                  <option value="Product Sourcing & Supply Chain Agreement">Supply Chain Deal</option>
                 </select>
               </div>
 
               <div>
                 <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>Intellectual Property Clause</label>
-                <select
+                <input
+                  type="text"
                   value={ipClauses}
                   onChange={(e) => setIpClauses(e.target.value)}
                   style={{ width: '100%', background: '#080c14', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '6px', color: '#fff', fontSize: '13px' }}
-                >
-                  <option value="Assigns immediately upon project invoice settlement">Fully Assigns to Client on Settlement</option>
-                  <option value="Developer retains framework rights, custom code assigns to client">Shared Custom Code Assignments</option>
-                  <option value="Client owns all specifications, developer has no reuse rights">Strict Proprietary Non-use</option>
-                </select>
+                />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>Confidentiality Duration</label>
+                <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>Confidentiality Period</label>
                 <select
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}
@@ -621,7 +907,7 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>Legal Jurisdiction</label>
+                <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>Governing Court Jurisdiction</label>
                 <input
                   type="text"
                   value={jurisdiction}
@@ -638,12 +924,12 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
       {sessionState === 'signed' && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', animation: 'fadeIn 0.5s ease-out' }}>
           <div className="glass-card" style={{ padding: '48px', maxWidth: '500px', width: '100%', textAlign: 'center', borderTop: '4px solid #10b981' }}>
-            <div style={{ display: 'inline-flex', padding: '16px', borderRadius: '50%', background: 'rgba(16,185,129,0.1)', color: '#10b981', marginBottom: '24px' }}>
+            <div style={{ display: 'inline-flex', padding: '16px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', marginBottom: '24px' }}>
               <ShieldCheck size={36} />
             </div>
-            <h2 style={{ fontSize: '24px', marginBottom: '8px' }}>Security Access Key Generated</h2>
+            <h2 style={{ fontSize: '24px', marginBottom: '8px' }}>Deal Key Generated</h2>
             <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: 1.6, marginBottom: '32px' }}>
-              Your B2B NDA Agreement has been signed and validated. The following single-session access key allows connection into the zero-knowledge WebRTC tunnel.
+              The agreement has been verified and logged cryptographically. The following access key provides authorization into the encrypted WebRTC deal room tunnel.
             </p>
 
             <div style={{
@@ -688,7 +974,7 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
 
       {/* 3. ACTIVE DEAL ROOM CONSOLE */}
       {sessionState === 'active' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '24px', animation: 'fadeIn 0.5s ease-out' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', animation: 'fadeIn 0.5s ease-out' }}>
           
           {/* Left Console Panel */}
           <div style={{ display: 'grid', gap: '24px' }}>
@@ -698,8 +984,8 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10b981', animation: 'pulseGlow 1.5s infinite' }} />
                 <div>
-                  <h3 style={{ fontSize: '15px' }}>Direct Encrypted Tunnel: {accessCode}</h3>
-                  <span style={{ fontSize: '11px', color: '#34d399', fontWeight: 600 }}>SECURE AES-GCM CONNECTION</span>
+                  <h3 style={{ fontSize: '15px' }}>{dealTitle} ({accessCode})</h3>
+                  <span style={{ fontSize: '11px', color: '#34d399', fontWeight: 600 }}>SECURE AES-GCM ENCRYPTED TUNNEL</span>
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -723,64 +1009,64 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
                     gap: '6px'
                   }}
                 >
-                  <Trash2 size={13} /> Close & Wipe Session
+                  <Trash2 size={13} /> Close & Wipe
                 </button>
               </div>
             </div>
 
             {/* Video Call Simulation Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-              {/* Client Stream */}
+              {/* Party A Stream */}
               <div className="glass-card" style={{ height: '220px', position: 'relative', overflow: 'hidden', background: '#080c14' }}>
                 {cameraActive ? (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle, #1e293b 0%, #080c14 100%)' }}>
                     {screenShareActive ? (
                       <div style={{ width: '100%', height: '100%', padding: '16px', fontFamily: 'monospace', fontSize: '9px', color: '#60a5fa', overflow: 'hidden' }}>
-                        <div style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '6px', marginBottom: '8px' }}>[SCREEN SHARE ACTIVE - Source Code]</div>
-                        <div>import React from 'react';</div>
-                        <div>const DealRoom = () =&gt; &#123;</div>
-                        <div style={{ paddingLeft: '12px' }}>const [active, setActive] = useState(true);</div>
-                        <div style={{ paddingLeft: '12px' }}>const wipeData = () =&gt; WebRTC.destroy();</div>
-                        <div style={{ paddingLeft: '12px' }}>return &lt;div&gt;Secure Room&lt;/div&gt;;</div>
-                        <div>&#125;</div>
+                        <div style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '6px', marginBottom: '8px' }}>[SCREEN SHARE - Proposal Term Sheets]</div>
+                        <div>1. STRATEGIC COOPERATION AGREEMENT</div>
+                        <div>1.1 Subject: Provision of dedicated cloud servers.</div>
+                        <div style={{ paddingLeft: '12px' }}>a) SLA Target: 99.99% monthly availability metrics.</div>
+                        <div style={{ paddingLeft: '12px' }}>b) Liability Index: Tier 1 standard caps.</div>
+                        <div>2. FINANCIAL SCHEDULE:</div>
+                        <div style={{ paddingLeft: '12px' }}>a) Fixed: $1,200,000 yearly commitment indices.</div>
                       </div>
                     ) : (
                       <div style={{ textAlign: 'center' }}>
                         <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px auto' }}>
                           <Lock size={20} />
                         </div>
-                        <span style={{ fontSize: '13px', color: '#94a3b8' }}>Secure Client Camera Feed</span>
+                        <span style={{ fontSize: '13px', color: '#94a3b8' }}>Secure Camera Feed: Party A</span>
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b' }}>Camera Disabled</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b' }}>Camera Muted</div>
                 )}
                 <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'rgba(0,0,0,0.6)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px' }}>
-                  You (Client)
+                  {repA} ({partyA})
                 </div>
               </div>
 
-              {/* Developer Stream */}
+              {/* Party B Stream */}
               <div className="glass-card" style={{ height: '220px', position: 'relative', overflow: 'hidden', background: '#080c14' }}>
                 <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle, #1e293b 0%, #080c14 100%)' }}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ width: '64px', height: '64px', borderRadius: '50%', overflow: 'hidden', border: '2px solid #8b5cf6', margin: '0 auto 12px auto' }}>
                       <img
                         src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=80&q=80"
-                        alt={partyB}
+                        alt={repB}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                     </div>
-                    <span style={{ fontSize: '13px', color: '#cbd5e1' }}>{partyB} (Connected)</span>
+                    <span style={{ fontSize: '13px', color: '#cbd5e1' }}>{repB} ({partyB})</span>
                     <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', marginTop: '6px' }}>
                       <span style={{ fontSize: '10px', background: 'rgba(16,185,129,0.1)', color: '#34d399', padding: '1px 6px', borderRadius: '4px' }}>FPS: 30</span>
-                      <span style={{ fontSize: '10px', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', padding: '1px 6px', borderRadius: '4px' }}>RTT: 42ms</span>
+                      <span style={{ fontSize: '10px', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', padding: '1px 6px', borderRadius: '4px' }}>RTT: 28ms</span>
                     </div>
                   </div>
                 </div>
                 <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'rgba(0,0,0,0.6)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px' }}>
-                  {partyB}
+                  {repB} ({partyB})
                 </div>
               </div>
             </div>
@@ -838,28 +1124,28 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
             <div className="glass-card" style={{ height: '360px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <div style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <MessageSquare size={16} color="#8b5cf6" />
-                <span style={{ fontSize: '13px', fontWeight: 600 }}>Zero-Persistence Signal Ledger</span>
+                <span style={{ fontSize: '13px', fontWeight: 600 }}>Zero-Trace Secure Chat Ledger</span>
               </div>
               
               <div style={{ flex: 1, padding: '16px', overflowY: 'auto' }} className="custom-scroll">
                 {messages.map((msg: ChatMessage) => (
-                  <div key={msg.id} style={{ marginBottom: '16px', textAlign: msg.sender === 'PartyA' ? 'right' : 'left' }}>
+                  <div key={msg.id} style={{ marginBottom: '16px', textAlign: msg.senderName.includes(signingAs === 'repA' ? partyA : partyB) ? 'right' : 'left' }}>
                     {msg.sender === 'System' ? (
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', color: '#64748b', fontFamily: 'monospace' }}>
                         <Terminal size={10} /> {msg.text}
                       </div>
                     ) : (
                       <div style={{ display: 'inline-block', maxWidth: '80%', textAlign: 'left' }}>
-                        <div style={{ fontSize: '10px', color: '#64748b', marginBottom: '2px', display: 'flex', gap: '6px', justifyContent: msg.sender === 'PartyA' ? 'flex-end' : 'flex-start' }}>
+                        <div style={{ fontSize: '10px', color: '#64748b', marginBottom: '2px', display: 'flex', gap: '6px', justifyContent: msg.senderName.includes(signingAs === 'repA' ? partyA : partyB) ? 'flex-end' : 'flex-start' }}>
                           <span>{msg.senderName}</span>
                           <span>{msg.timestamp}</span>
                         </div>
                         <div style={{
-                          background: msg.sender === 'PartyA' ? '#8b5cf6' : 'rgba(255,255,255,0.03)',
-                          border: msg.sender === 'PartyA' ? 'none' : '1px solid rgba(255,255,255,0.05)',
+                          background: msg.senderName.includes(signingAs === 'repA' ? partyA : partyB) ? '#8b5cf6' : 'rgba(255,255,255,0.03)',
+                          border: msg.senderName.includes(signingAs === 'repA' ? partyA : partyB) ? 'none' : '1px solid rgba(255,255,255,0.05)',
                           color: '#f8fafc',
                           padding: '8px 14px',
-                          borderRadius: msg.sender === 'PartyA' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+                          borderRadius: msg.senderName.includes(signingAs === 'repA' ? partyA : partyB) ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
                           fontSize: '13px',
                           lineHeight: 1.4
                         }}>
@@ -876,7 +1162,7 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
               <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '12px 16px', display: 'flex', gap: '12px' }}>
                 <input
                   type="text"
-                  placeholder="Send direct message (AES encrypted)..."
+                  placeholder="Send direct message (AES-GCM encrypted)..."
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
@@ -914,10 +1200,10 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
           {/* Right Ephemeral File Vault */}
           <div className="glass-card" style={{ padding: '24px', height: '100%', display: 'flex', flexDirection: 'column' }}>
             <h3 style={{ fontSize: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <FileText size={16} color="#8b5cf6" /> Ephemeral File Locker
+              <FileText size={16} color="#8b5cf6" /> Versioned Proposals
             </h3>
             <p style={{ color: '#64748b', fontSize: '11px', lineHeight: 1.4, marginBottom: '20px' }}>
-              All documents placed here are encrypted and cached solely inside active memory nodes. Files are purged cryptographically on close.
+              All documents are cached only inside active session memory slots. No database logs remain after purging.
             </p>
 
             {/* Drop simulator */}
@@ -945,8 +1231,8 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
                 }}
               />
               <Upload size={24} color="#a78bfa" style={{ margin: '0 auto 8px auto' }} />
-              <span style={{ fontSize: '12px', color: '#cbd5e1', display: 'block' }}>Drag files or click to upload</span>
-              <span style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', display: 'block' }}>PDF, PNG, JSON (Max 5MB)</span>
+              <span style={{ fontSize: '12px', color: '#cbd5e1', display: 'block' }}>Drag new proposals or click</span>
+              <span style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', display: 'block' }}>PDF, DOCX, PNG (Max 5MB)</span>
             </div>
 
             {/* File List */}
@@ -954,7 +1240,7 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
               {files.map((file: EphemeralFile, idx: number) => (
                 <div
                   key={idx}
-                  onClick={() => alert(`Direct memory buffer loaded. Content Mock: ${file.contentMock}`)}
+                  onClick={() => alert(`Proposal Buffer Content: ${file.contentMock}`)}
                   style={{
                     background: 'rgba(255, 255, 255, 0.01)',
                     border: '1px solid rgba(255, 255, 255, 0.05)',
@@ -988,12 +1274,12 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
           
           <div style={{ maxWidth: '640px', width: '100%', padding: '32px' }}>
             <h2 style={{ fontSize: '20px', marginBottom: '20px', borderBottom: '1px solid #10b981', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <RefreshCw size={18} className="spin-slow" /> CRYPTOGRAPHIC SCRUB COMMAND ACTIVE
+              <RefreshCw size={18} className="spin-slow" /> CRYPTOGRAPHIC MEMORY PURGING ACTIVE
             </h2>
             
             {/* Terminal logs */}
             <div style={{
-              background: 'rgba(0,0,0,0.85)',
+              background: 'rgba(0,0,0,0.9)',
               border: '1px solid #10b981',
               borderRadius: '8px',
               padding: '20px',
@@ -1011,7 +1297,7 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
               ))}
               {wipeConsoleLogs.length === 8 && (
                 <div style={{ color: '#10b981', fontWeight: 'bold', marginTop: '12px', textAlign: 'center' }}>
-                  ★★★ SYSTEM SANITIZED: SESSION MEMORY WIPED ★★★
+                  ★★★ CHOBER SANITIZED: SESSION WIPED FROM PLATFORM MEMORY ★★★
                 </div>
               )}
             </div>
@@ -1019,7 +1305,7 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
             {/* Audit Log Proof */}
             {auditLogContent && (
               <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
-                <h3 style={{ fontSize: '13px', color: '#10b981', marginBottom: '8px', fontWeight: 600 }}>Tamper-proof Cryptographic Verification Log:</h3>
+                <h3 style={{ fontSize: '13px', color: '#10b981', marginBottom: '8px', fontWeight: 600 }}>Tamper-proof Cryptographic Verification Receipt:</h3>
                 <pre style={{
                   background: 'rgba(0,0,0,0.6)',
                   border: '1px solid rgba(16, 185, 129, 0.3)',
@@ -1072,7 +1358,7 @@ export const DealRoom = ({ defaultPartner = 'Alex Rivers', onNavigateToDashboard
                       gap: '6px'
                     }}
                   >
-                    <LogOut size={14} /> Return to Landing
+                    <LogOut size={14} /> Return to Dashboard
                   </button>
                 </div>
               </div>

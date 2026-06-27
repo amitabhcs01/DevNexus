@@ -184,6 +184,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     key_skills TEXT,
     experience_level TEXT,
     portfolio_link TEXT,
+    password_hash TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -202,11 +203,11 @@ ON public.profiles FOR UPDATE
 USING (auth.uid() = id);
 
 -- Seed default profiles for demonstration
-INSERT INTO public.profiles (id, email, role, company_name, corporate_title, project_budget, full_name, key_skills, experience_level, portfolio_link)
+INSERT INTO public.profiles (id, email, role, company_name, corporate_title, project_budget, full_name, key_skills, experience_level, portfolio_link, password_hash)
 VALUES
-('00000000-0000-0000-0000-000000000001', 'admin@devnexus.local', 'admin', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-('00000000-0000-0000-0000-000000000002', 'client@devnexus.local', 'client', 'Nexus Capital', 'Managing Partner', 150000, NULL, NULL, NULL, NULL),
-('00000000-0000-0000-0000-000000000003', 'developer@devnexus.local', 'developer', NULL, NULL, NULL, 'Alex Rivers', 'React, WebRTC, Node.js', 'senior', 'https://github.com/alexrivers'),
-('00000000-0000-0000-0000-000000000004', 'chloe.zhao@devnexus.local', 'developer', NULL, NULL, NULL, 'Chloe Zhao', 'React, Next.js, Framer Motion', 'senior', 'https://github.com/chloez-design'),
-('00000000-0000-0000-0000-000000000005', 'john.founder@acme.com', 'client', 'Acme Corp', 'CEO & Founder', 35000, NULL, NULL, NULL, NULL)
+('00000000-0000-0000-0000-000000000001', 'admin@devnexus.local', 'admin', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'c05d76d4994276707a00f13511eb0fa7e268a73b3eb72f10b78c93ef859ff7b8'),
+('00000000-0000-0000-0000-000000000002', 'client@devnexus.local', 'client', 'Nexus Capital', 'Managing Partner', 150000, NULL, NULL, NULL, NULL, '030737a4db77c687e14bdbe39cdfeebfbca65a58a74e548ad7cd6cdcfb577484'),
+('00000000-0000-0000-0000-000000000003', 'developer@devnexus.local', 'developer', NULL, NULL, NULL, 'Alex Rivers', 'React, WebRTC, Node.js', 'senior', 'https://github.com/alexrivers', '22a101f3cf65d9c7bb7ec32057d3835697d268d0de1f1737be2e6ea9bf472251'),
+('00000000-0000-0000-0000-000000000004', 'chloe.zhao@devnexus.local', 'developer', NULL, NULL, NULL, 'Chloe Zhao', 'React, Next.js, Framer Motion', 'senior', 'https://github.com/chloez-design', '22a101f3cf65d9c7bb7ec32057d3835697d268d0de1f1737be2e6ea9bf472251'),
+('00000000-0000-0000-0000-000000000005', 'john.founder@acme.com', 'client', 'Acme Corp', 'CEO & Founder', 35000, NULL, NULL, NULL, NULL, '030737a4db77c687e14bdbe39cdfeebfbca65a58a74e548ad7cd6cdcfb577484')
 ON CONFLICT (id) DO NOTHING;

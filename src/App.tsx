@@ -5,16 +5,19 @@ import { Marketplace } from './components/Marketplace';
 import { DealRoom } from './components/DealRoom';
 import { Dashboard } from './components/Dashboard';
 import { Auth } from './components/Auth';
+import { LoggedInHome } from './components/LoggedInHome';
 import { supabase } from './supabaseClient';
-import { Cpu, Users, EyeOff, BarChart3, Home, Shield, Clock, LogOut, Menu, X } from 'lucide-react';
+import { Cpu, Users, EyeOff, BarChart3, Home, Shield, Clock, LogOut, Menu, X, User } from 'lucide-react';
 
-type TabType = 'landing' | 'advisory' | 'marketplace' | 'dealroom' | 'dashboard';
+type TabType = 'landing' | 'advisory' | 'marketplace' | 'dealroom' | 'dashboard' | 'profile';
 
 function App() {
   const [activeTab, setActiveTab] = useState<TabType>('landing');
   const [advisoryFilters, setAdvisoryFilters] = useState<{ skills: string[]; budget: number } | null>(null);
   const [dealRoomPartner, setDealRoomPartner] = useState<string>('Alex Rivers');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
 
   const [session, setSession] = useState<any>(null);
   const [authLoaded, setAuthLoaded] = useState(false);
@@ -74,9 +77,56 @@ function App() {
     );
   }
 
+  // Determine user role if session exists
+  const userEmail = session?.user?.email || '';
+  const userRole = userEmail === 'admin@devnexus.local' 
+    ? 'admin' 
+    : userEmail === 'developer@devnexus.local' || session?.user?.user_metadata?.role === 'developer'
+      ? 'developer'
+      : 'client';
+
   if (!session) {
-    return <Auth onAuthSuccess={(s) => setSession(s)} />;
+    if (showAuth) {
+      return (
+        <div style={{ position: 'relative' }}>
+          <button 
+            onClick={() => setShowAuth(false)}
+            style={{
+              position: 'absolute',
+              top: '24px',
+              left: '24px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              color: '#94a3b8',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              zIndex: 100,
+              fontSize: '13px',
+              fontWeight: 500,
+              transition: 'var(--transition-smooth)'
+            }}
+          >
+            ← Back to Home
+          </button>
+          <Auth onAuthSuccess={(s) => { setSession(s); setShowAuth(false); }} />
+        </div>
+      );
+    }
+    return <LandingPage onNavigate={(tab) => { if (tab === 'auth') { setShowAuth(true); } else { setShowAuth(true); } }} />;
   }
+
+  // Filter navigation tabs by role
+  const allNavItems = [
+    { id: 'landing', label: 'Dashboard Home', icon: <Home size={18} />, color: '#3b82f6', roles: ['client', 'developer', 'admin'] },
+    { id: 'advisory', label: 'AI Advisory Hub', icon: <Cpu size={18} />, color: '#3b82f6', roles: ['client'] },
+    { id: 'marketplace', label: 'Developer Registry', icon: <Users size={18} />, color: '#10b981', roles: ['client', 'admin'] },
+    { id: 'dealroom', label: 'Private Deal Room', icon: <EyeOff size={18} />, color: '#8b5cf6', roles: ['client', 'developer', 'admin'] },
+    { id: 'dashboard', label: 'SaaS Analytics', icon: <BarChart3 size={18} />, color: '#f97316', roles: ['client', 'developer', 'admin'] },
+    { id: 'profile', label: 'Profile Manager', icon: <User size={18} />, color: '#10b981', roles: ['developer'] }
+  ];
+
+  const navItems = allNavItems.filter(item => item.roles.includes(userRole));
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-primary)' }}>
@@ -97,9 +147,8 @@ function App() {
         bottom: 0,
         left: 0,
         zIndex: 100,
-        transition: 'transform 0.3s ease',
-        transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)' // standard desktop has CSS fallback
-      }} className="sidebar">
+        transition: 'transform 0.3s ease'
+      }} className={`sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
         
         {/* Logo Brand */}
         <div style={{
@@ -131,13 +180,7 @@ function App() {
 
         {/* Navigation List */}
         <nav style={{ padding: '24px 16px', flex: 1, display: 'grid', gap: '8px', alignContent: 'start' }}>
-          {[
-            { id: 'landing', label: 'Dashboard Home', icon: <Home size={18} />, color: '#3b82f6' },
-            { id: 'advisory', label: 'AI Advisory Hub', icon: <Cpu size={18} />, color: '#3b82f6' },
-            { id: 'marketplace', label: 'Developer Registry', icon: <Users size={18} />, color: '#10b981' },
-            { id: 'dealroom', label: 'Private Deal Room', icon: <EyeOff size={18} />, color: '#8b5cf6' },
-            { id: 'dashboard', label: 'SaaS Analytics', icon: <BarChart3 size={18} />, color: '#f97316' }
-          ].map((item) => {
+          {navItems.map((item) => {
             const isActive = activeTab === item.id;
             return (
               <button
@@ -180,29 +223,8 @@ function App() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Clock size={12} />
-            <span>Session: {session.user?.email ? (session.user.email.length > 18 ? session.user.email.substring(0, 18) + '...' : session.user.email) : 'Local Guest'}</span>
+            <span>Session: Active</span>
           </div>
-          <button
-            onClick={handleSignOut}
-            style={{
-              background: 'rgba(239, 68, 68, 0.08)',
-              border: '1px solid rgba(239, 68, 68, 0.15)',
-              color: '#f87171',
-              padding: '8px 12px',
-              borderRadius: '8px',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              marginTop: '4px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              transition: 'var(--transition-smooth)'
-            }}
-          >
-            <LogOut size={12} /> Sign Out Session
-          </button>
           <div>© 2026 DevNexus Inc.</div>
         </div>
       </aside>
@@ -268,37 +290,105 @@ function App() {
               <Shield size={12} /> E2E Shield Active
             </div>
             
-            {/* User Profile Info Mock */}
+            {/* User Profile Info Interactive Dropdown */}
             <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
+              position: 'relative',
               borderLeft: '1px solid rgba(255,255,255,0.1)',
-              paddingLeft: '16px'
+              paddingLeft: '16px',
+              zIndex: 999
             }}>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: '#f8fafc' }}>
-                  {session.user?.email ? session.user.email.split('@')[0] : 'Guest User'}
+              <div 
+                onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  cursor: 'pointer',
+                  userSelect: 'none'
+                }}
+              >
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#f8fafc' }}>
+                    {session.user?.email ? session.user.email.split('@')[0] : 'User'}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#3b82f6', textTransform: 'capitalize', fontWeight: 600 }}>
+                    {userRole}
+                  </div>
                 </div>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>
-                  {session.user?.email?.endsWith('.local') ? 'Guest Sandbox Account' : 'Client Account'}
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  border: '1px solid rgba(255,255,255,0.2)'
+                }}>
+                  {session.user?.email ? session.user.email.substring(0, 2).toUpperCase() : 'US'}
                 </div>
               </div>
-              <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                background: '#1e293b',
-                color: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '13px',
-                fontWeight: 700,
-                border: '1px solid rgba(255,255,255,0.1)'
-              }}>
-                {session.user?.email ? session.user.email.substring(0, 2).toUpperCase() : 'GU'}
-              </div>
+
+              {profileDropdownOpen && (
+                <div className="glass-card" style={{
+                  position: 'absolute',
+                  top: '42px',
+                  right: 0,
+                  width: '240px',
+                  padding: '16px',
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  zIndex: 9999,
+                  display: 'grid',
+                  gap: '12px'
+                }}>
+                  <div style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
+                    <div style={{ fontSize: '11px', color: '#64748b' }}>Connected Account:</div>
+                    <div style={{ fontSize: '13px', color: '#cbd5e1', fontWeight: 500, wordBreak: 'break-all' }}>{session.user?.email}</div>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', color: '#94a3b8' }}>Platform Role:</span>
+                    <span style={{
+                      fontSize: '10px',
+                      background: userRole === 'admin' ? 'rgba(239, 68, 68, 0.1)' : userRole === 'developer' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)',
+                      color: userRole === 'admin' ? '#f87171' : userRole === 'developer' ? '#34d399' : '#60a5fa',
+                      border: userRole === 'admin' ? '1px solid rgba(239, 68, 68, 0.2)' : userRole === 'developer' ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid rgba(59, 130, 246, 0.2)',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      fontWeight: 600,
+                      textTransform: 'uppercase'
+                    }}>{userRole}</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setProfileDropdownOpen(false);
+                      handleSignOut();
+                    }}
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.08)',
+                      border: '1px solid rgba(239, 68, 68, 0.15)',
+                      color: '#f87171',
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      width: '100%',
+                      transition: 'var(--transition-smooth)'
+                    }}
+                    className="logout-btn"
+                  >
+                    <LogOut size={12} /> Sign Out Session
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -306,14 +396,14 @@ function App() {
         {/* Dynamic View Wrapper */}
         <main className="main-content" style={{ padding: '32px', minHeight: 'calc(100vh - 70px)' }}>
           {activeTab === 'landing' && (
-            <LandingPage onNavigate={navigateToTab as any} />
+            <LoggedInHome user={session?.user} role={userRole} onNavigate={navigateToTab as any} />
           )}
 
-          {activeTab === 'advisory' && (
+          {activeTab === 'advisory' && userRole === 'client' && (
             <AdvisoryHub onNavigateToMarketplace={handleNavigateToMarketplace} />
           )}
 
-          {activeTab === 'marketplace' && (
+          {activeTab === 'marketplace' && (userRole === 'client' || userRole === 'admin') && (
             <Marketplace
               initialFilters={advisoryFilters}
               onOpenDealRoom={handleOpenDealRoom}
@@ -332,6 +422,42 @@ function App() {
 
           {activeTab === 'dashboard' && (
             <Dashboard user={session?.user} />
+          )}
+
+          {activeTab === 'profile' && userRole === 'developer' && (
+            <div className="glass-card" style={{ padding: '32px', animation: 'fadeIn 0.5s ease-out' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}>
+                  <User size={24} />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: '22px' }}>Developer Profile Manager</h2>
+                  <p style={{ color: '#94a3b8', fontSize: '13px' }}>Configure your professional card parameters rendered inside the public talent registry.</p>
+                </div>
+              </div>
+              <div style={{ display: 'grid', gap: '20px', maxWidth: '600px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', color: '#cbd5e1', marginBottom: '6px', fontWeight: 600 }}>Hourly Billing Rate ($USD)</label>
+                  <input type="number" defaultValue={115} style={{ width: '100%', background: '#080c14', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '6px', color: '#fff' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', color: '#cbd5e1', marginBottom: '6px', fontWeight: 600 }}>Availability State</label>
+                  <select defaultValue="Available Now" style={{ width: '100%', background: '#080c14', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '6px', color: '#fff' }}>
+                    <option>Available Now</option>
+                    <option>In 1 Week</option>
+                    <option>In 2 Weeks</option>
+                    <option>Not Available</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', color: '#cbd5e1', marginBottom: '6px', fontWeight: 600 }}>Professional Portfolio Link</label>
+                  <input type="text" defaultValue="https://github.com/alexrivers" style={{ width: '100%', background: '#080c14', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '6px', color: '#fff' }} />
+                </div>
+                <button onClick={() => alert('Profile parameters updated in database registry.')} className="btn-glow-blue" style={{ background: '#3b82f6', border: 'none', color: '#fff', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>
+                  Save Profile Changes
+                </button>
+              </div>
+            </div>
           )}
         </main>
       </div>
@@ -354,8 +480,11 @@ function App() {
 
         @media (max-width: 991px) {
           .sidebar {
-            transform: ${mobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)'} !important;
-            box-shadow: ${mobileMenuOpen ? '0 0 30px rgba(0,0,0,0.8)' : 'none'} !important;
+            transform: translateX(-100%) !important;
+          }
+          .sidebar.mobile-open {
+            transform: translateX(0) !important;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8) !important;
           }
           .main-container {
             margin-left: 0 !important;

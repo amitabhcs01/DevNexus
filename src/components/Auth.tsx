@@ -26,6 +26,13 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
   const [experienceLevel, setExperienceLevel] = useState('senior');
   const [portfolioLink, setPortfolioLink] = useState('');
 
+  const hashPassword = async (pwd: string): Promise<string> => {
+    const msgBuffer = new TextEncoder().encode(pwd);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) {
@@ -39,7 +46,7 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
 
     // 1. LOCAL MODE FALLBACK
     if (!isSupabaseConfigured) {
-      setTimeout(() => {
+      setTimeout(async () => {
         // Pre-created credentials simulation or fallback
         let resolvedRole = 'client';
         let resolvedEmail = email;
@@ -81,6 +88,8 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
 
     // 2. PRODUCTION SUPABASE MODE
     try {
+      const computedHash = await hashPassword(password);
+
       if (isSignUp) {
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -114,7 +123,8 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
               full_name: selectedRole === 'developer' ? fullName : null,
               key_skills: selectedRole === 'developer' ? keySkills : null,
               experience_level: selectedRole === 'developer' ? experienceLevel : null,
-              portfolio_link: selectedRole === 'developer' ? portfolioLink : null
+              portfolio_link: selectedRole === 'developer' ? portfolioLink : null,
+              password_hash: computedHash
             });
           if (profileError) {
             console.error('Error creating public profile entry:', profileError.message);
@@ -127,13 +137,90 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           setSuccessMsg('Registration successful! Please check your email inbox to confirm registration.');
         }
       } else {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-        if (error) throw error;
-        if (data.session) {
-          onAuthSuccess(data.session);
+        let sessionData = null;
+        let authError = null;
+
+        try {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password
+          });
+          if (error) {
+            authError = error;
+          } else {
+            sessionData = data.session;
+          }
+        } catch (err: any) {
+          authError = err;
+        }
+
+        // If sign-in fails, check if database profile matches for auto-sync registration
+        if (authError || !sessionData) {
+          console.log('Production auth failed. Verifying profile password hash fallback...');
+          const { data: profile, error: dbError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('email', email)
+            .maybeSingle();
+
+          if (!dbError && profile && profile.password_hash === computedHash) {
+            console.log('Profile password verified. Dynamically creating Auth credentials in production...');
+            
+            // Sign up in auth on-the-fly
+            const { error: signUpError } = await supabase.auth.signUp({
+              email,
+              password,
+              options: {
+                data: {
+                  role: profile.role,
+                  companyName: profile.company_name,
+                  corporateTitle: profile.corporate_title,
+                  projectBudget: profile.project_budget ? String(profile.project_budget) : undefined,
+                  fullName: profile.full_name,
+                  keySkills: profile.key_skills,
+                  experienceLevel: profile.experience_level,
+                  portfolioLink: profile.portfolio_link
+                }
+              }
+            });
+
+            if (!signUpError) {
+              console.log('Auto-registration successful. Completing session sign-in...');
+              const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
+                email,
+                password
+              });
+
+              if (!retryError && retryData.session) {
+                const newUserId = retryData.session.user.id;
+                console.log(`Synchronizing profile UUID to match newly generated auth key: ${newUserId}`);
+                
+                // Keep the record but switch IDs
+                await supabase.from('profiles').delete().eq('id', profile.id);
+                
+                const { error: reInsertError } = await supabase.from('profiles').insert({
+                  ...profile,
+                  id: newUserId
+                });
+                
+                if (reInsertError) {
+                  console.error('Error re-inserting synced profile:', reInsertError.message);
+                }
+
+                sessionData = retryData.session;
+              } else {
+                throw retryError || new Error('Auth retry login failed.');
+              }
+            } else {
+              throw signUpError;
+            }
+          } else {
+            throw authError || new Error('Invalid login credentials.');
+          }
+        }
+
+        if (sessionData) {
+          onAuthSuccess(sessionData);
         }
       }
     } catch (err: any) {
