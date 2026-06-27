@@ -69,6 +69,12 @@ export interface ProjectBrief {
     useCase: string;
     uniqueness: string;
   };
+  implementationRoadmap: {
+    stages: { stage: string; timeframe: string; deliverable: string; owner: string }[];
+    criticalPath: string;
+    riskFlags: string[];
+    recommendedTeamSize: string;
+  };
 }
 
 export interface NDA {

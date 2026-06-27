@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Cpu, HelpCircle, FileText, UserCheck, Calendar, DollarSign, ArrowRight, ShieldCheck, ChevronRight, CheckCircle2, AlertTriangle, Lightbulb, Workflow, ShieldAlert, Sparkles } from 'lucide-react';
+import { Cpu, HelpCircle, FileText, UserCheck, Calendar, DollarSign, ArrowRight, ShieldCheck, ChevronRight, CheckCircle2, AlertTriangle, Lightbulb, Workflow, ShieldAlert, Sparkles, Key } from 'lucide-react';
 import type { ProjectBrief } from '../types';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
@@ -7,7 +7,7 @@ interface AdvisoryHubProps {
   onNavigateToMarketplace: (filters: { skills: string[]; budget: number }) => void;
 }
 
-// YC-Level Advisor Local Compiler
+// YC-Level Advisor Local Compiler (v2)
 const compileAdvisoryReport = (inputQuery: string): ProjectBrief => {
   const queryLower = inputQuery.toLowerCase();
   
@@ -71,6 +71,25 @@ const compileAdvisoryReport = (inputQuery: string): ProjectBrief => {
       'Deploy SOC2-compliant system monitoring logs and diagnostics.'
     ],
     techStack: ['Stripe', 'Chart.js', 'AWS ECS', 'CloudWatch']
+  };
+
+  let implementationRoadmap = {
+    stages: [
+      { stage: 'Discovery & Planning', timeframe: 'Weeks 1–2', deliverable: `Requirements specifications, tech stack lock, wireframe drafts for ${titleClean}.`, owner: 'PM + Architect' },
+      { stage: 'Backend Schema Design', timeframe: 'Weeks 3–4', deliverable: `PostgreSQL databases layout, RLS security configurations, API gateway maps.`, owner: 'Backend Dev' },
+      { stage: 'Frontend Component Build', timeframe: 'Weeks 5–6', deliverable: `Core UI component mockups, router mappings, state variables setup.`, owner: 'Frontend Dev' },
+      { stage: 'Core Feature Integration', timeframe: 'Weeks 7–10', deliverable: `All Phase 1 features fully live in remote staging environment.`, owner: 'Full-stack Team' },
+      { stage: 'QA & Vulnerability Audits', timeframe: 'Week 11', deliverable: `Functional testing checks, load testing, security scans.`, owner: 'QA Engineer' },
+      { stage: 'MVP Launch', timeframe: 'Week 12', deliverable: `Production launch, active logging metrics setup.`, owner: 'DevOps + PM' },
+      { stage: 'Phase 2 Enhancements', timeframe: 'Month 4+', deliverable: `Adding custom integrations and feedback iterations.`, owner: 'Full Team' }
+    ],
+    criticalPath: 'Database schema design and core API routing configuration. Front-end developers are blocked until these APIs are live in staging.',
+    riskFlags: [
+      'Scope creep concerning advanced multi-tenant specifications.',
+      'API rate-limit blockages from third-party vendor check providers.',
+      'Database lockups under high simultaneous write loads.'
+    ],
+    recommendedTeamSize: '1 Product Manager, 1 Software Architect, 1 Backend Engineer, 1 Frontend Engineer, 1 QA Specialist.'
   };
   
   let functionalRequirements = [
@@ -151,6 +170,25 @@ const compileAdvisoryReport = (inputQuery: string): ProjectBrief => {
         'Deploy automated room termination timers.'
       ],
       techStack: ['AWS Nitro Enclaves', 'Auth0', 'S3', 'Docker']
+    };
+
+    implementationRoadmap = {
+      stages: [
+        { stage: 'Security Scope & ECDH planning', timeframe: 'Weeks 1–2', deliverable: 'Cryptographic threat model, WebCrypto handshake protocol flow validation.', owner: 'Security Architect' },
+        { stage: 'Signaling Server Deployment', timeframe: 'Weeks 3–4', deliverable: 'Socket.io signaling server active on AWS, room code generator live.', owner: 'Backend Dev' },
+        { stage: 'E2E Crypto & Canvas Signature', timeframe: 'Weeks 5–6', deliverable: 'Client-side AES-GCM file chunk encryptor logic, canvas drawing captures.', owner: 'Crypto Dev' },
+        { stage: 'WebRTC Video Streams Sync', timeframe: 'Weeks 7–10', deliverable: 'Direct peer video channels live, COTURN firewall traversal active.', owner: 'WebRTC Expert' },
+        { stage: 'Penetration Testing & Purging QA', timeframe: 'Week 11', deliverable: 'Memory leak inspections, script-injection checks, socket crash audits.', owner: 'QA Engineer' },
+        { stage: 'Secure Chamber Launch', timeframe: 'Week 12', deliverable: 'Production deployment, tamper-proof JSON integrity receipts live.', owner: 'DevOps + PM' },
+        { stage: 'SSO Integrations & Nitro Enclaves', timeframe: 'Month 4+', deliverable: 'SAML enterprise logins, secure enclave indexing.', owner: 'Full Team' }
+      ],
+      criticalPath: 'Signaling server socket handshakes and COTURN traversal configurations. Ephemeral file vault is blocked until peer tunnels are verified.',
+      riskFlags: [
+        'Enterprise firewall blockages on WebRTC port bindings.',
+        'Asymmetric key performance drops on legacy mobile browsers.',
+        'File indexing lag in browser memory slots.'
+      ],
+      recommendedTeamSize: '1 PM, 1 Security/Crypto Lead, 1 WebRTC Engineer, 1 Frontend Engineer, 1 QA Engineer.'
     };
     
     functionalRequirements = [
@@ -234,6 +272,25 @@ const compileAdvisoryReport = (inputQuery: string): ProjectBrief => {
       ],
       techStack: ['PyTorch', 'Docker', 'AWS ECS', 'Grafana']
     };
+
+    implementationRoadmap = {
+      stages: [
+        { stage: 'AI Scope & Ingestion Planning', timeframe: 'Weeks 1–2', deliverable: 'Chunking parameter mapping, Pinecone vector schema draft.', owner: 'AI PM + Architect' },
+        { stage: 'Vector Ingestion Pipeline', timeframe: 'Weeks 3–4', deliverable: 'Automated chunking scripts, index uploads to Pinecone database.', owner: 'Data Engineer' },
+        { stage: 'RAG API Handshakes', timeframe: 'Weeks 5–6', deliverable: 'LangChain prompt orchestrations, Claude API models sync.', owner: 'Backend Dev' },
+        { stage: 'Stream UI Dashboard', timeframe: 'Weeks 7–10', deliverable: 'React conversational window, streaming (SSE) support chat feed.', owner: 'Frontend Dev' },
+        { stage: 'Hallucination & Token Audits', timeframe: 'Week 11', deliverable: 'Model accuracy profiling, token quota controls verification.', owner: 'AI QA Engineer' },
+        { stage: 'AI Agent MVP Launch', timeframe: 'Week 12', deliverable: 'Production chatbot live, feedback loop indicators.', owner: 'DevOps + PM' },
+        { stage: 'Fine-tuning & Local Models', timeframe: 'Month 4+', deliverable: 'Local Llama model hosting, custom model tuning.', owner: 'ML Ops Team' }
+      ],
+      criticalPath: 'Document indexing pipeline and chunking accuracy checks. Conversational stream UI is blocked until the RAG API returns valid context vectors.',
+      riskFlags: [
+        'AI prompt hallucinations on highly specific technical charts.',
+        'Unexpected token billing overhead under mass query loads.',
+        'Document parsing limitations on scans and handwritten files.'
+      ],
+      recommendedTeamSize: '1 Product Manager, 1 Data/LLM Engineer, 1 Python API Dev, 1 React UI Dev, 1 QA Specialist.'
+    };
     
     functionalRequirements = [
       'System must parse uploaded PDF, TXT, and DOCX files into indexed text chunks.',
@@ -316,6 +373,25 @@ const compileAdvisoryReport = (inputQuery: string): ProjectBrief => {
       ],
       techStack: ['TypeScript', 'Redis Cron', 'Chart.js']
     };
+
+    implementationRoadmap = {
+      stages: [
+        { stage: 'Marketplace Flow Planning', timeframe: 'Weeks 1–2', deliverable: 'Product catalog diagrams, Stripe split commission flows maps.', owner: 'Product Manager' },
+        { stage: 'DB Schema & Stripe Connect', timeframe: 'Weeks 3–4', deliverable: 'Postgres tables setup, Stripe Connect account registration live.', owner: 'Backend Dev' },
+        { stage: 'Product Catalog & Elements', timeframe: 'Weeks 5–6', deliverable: 'React product grids, Stripe checkout elements payment boxes.', owner: 'Frontend Dev' },
+        { stage: 'Webhooks & Order Processing', timeframe: 'Weeks 7–10', deliverable: 'Stripe webhook triggers, dynamic seller ledger splits, emails.', owner: 'Full-stack Dev' },
+        { stage: 'KYC Verification & Refund QA', timeframe: 'Week 11', deliverable: 'Onboarding decline workflows testing, payout conflict checks.', owner: 'QA Engineer' },
+        { stage: 'B2B Marketplace Launch', timeframe: 'Week 12', deliverable: 'Live payments enabled, platform analytics dashboard active.', owner: 'DevOps + PM' },
+        { stage: 'Metered Billing & Churn Analytics', timeframe: 'Month 4+', deliverable: 'Dynamic metered usage updates, retention charts.', owner: 'Full Team' }
+      ],
+      criticalPath: 'Stripe Connect merchant KYC verification mapping. Seller uploads and checkouts are blocked until payout ledger splits are fully verified.',
+      riskFlags: [
+        'Vendor onboarding drop-offs during identity verification checks.',
+        'Regional sales tax calculations complexity.',
+        'Vendor chargeback liability holds.'
+      ],
+      recommendedTeamSize: '1 Product Manager, 1 Payment Backend Engineer, 1 React UI Engineer, 1 QA Auditor.'
+    };
     
     functionalRequirements = [
       'Customers must be able to search and buy digital goods.',
@@ -359,6 +435,7 @@ const compileAdvisoryReport = (inputQuery: string): ProjectBrief => {
       phase2,
       phase3
     },
+    implementationRoadmap,
     functionalRequirements,
     nonFunctionalRequirements,
     spinoff
@@ -708,7 +785,7 @@ export const AdvisoryHub: React.FC<AdvisoryHubProps> = ({ onNavigateToMarketplac
             {/* 4. Implementation Plan */}
             <div className="glass-card" style={{ padding: '32px' }}>
               <h3 style={{ fontSize: '16px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Calendar size={16} color="#3b82f6" /> 4. Implementation Roadmap
+                <Calendar size={16} color="#3b82f6" /> 4. Implementation Plan
               </h3>
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
@@ -781,13 +858,79 @@ export const AdvisoryHub: React.FC<AdvisoryHubProps> = ({ onNavigateToMarketplac
               </div>
             </div>
 
-            {/* 5. Functional & 6. Non-Functional Requirements */}
+            {/* 5. Timeline Implementation Roadmap */}
+            <div className="glass-card" style={{ padding: '32px' }}>
+              <h3 style={{ fontSize: '16px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Workflow size={16} color="#fb923c" /> 5. Timeline Implementation Roadmap
+              </h3>
+              
+              {/* Stages Table */}
+              <div style={{ overflowX: 'auto', marginBottom: '28px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', color: '#94a3b8', fontSize: '13px' }}>
+                      <th style={{ padding: '10px 16px', fontWeight: 600 }}>Stage</th>
+                      <th style={{ padding: '10px 16px', fontWeight: 600 }}>Timeframe</th>
+                      <th style={{ padding: '10px 16px', fontWeight: 600 }}>Key Deliverable</th>
+                      <th style={{ padding: '10px 16px', fontWeight: 600 }}>Owner</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {brief.implementationRoadmap?.stages.map((stg, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', fontSize: '13px', transition: 'var(--transition-smooth)' }}>
+                        <td style={{ padding: '12px 16px', color: '#f8fafc', fontWeight: 600 }}>{stg.stage}</td>
+                        <td style={{ padding: '12px 16px', color: '#60a5fa', fontWeight: 500 }}>{stg.timeframe}</td>
+                        <td style={{ padding: '12px 16px', color: '#94a3b8', lineHeight: 1.4 }}>{stg.deliverable}</td>
+                        <td style={{ padding: '12px 16px', color: '#fb923c', fontWeight: 500 }}>{stg.owner}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Critical Path, Risk Flags, Team Size Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+                <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', padding: '20px', borderRadius: '10px' }}>
+                  <h4 style={{ fontSize: '12.5px', color: '#cbd5e1', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                    <Key size={13} color="#fb923c" /> CRITICAL PATH
+                  </h4>
+                  <p style={{ fontSize: '12.5px', color: '#94a3b8', lineHeight: 1.5 }}>
+                    {brief.implementationRoadmap?.criticalPath}
+                  </p>
+                </div>
+
+                <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', padding: '20px', borderRadius: '10px' }}>
+                  <h4 style={{ fontSize: '12.5px', color: '#cbd5e1', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                    <AlertTriangle size={13} color="#ef4444" /> RISK FLAGS
+                  </h4>
+                  <div style={{ display: 'grid', gap: '6px' }}>
+                    {brief.implementationRoadmap?.riskFlags.map((risk, idx) => (
+                      <div key={idx} style={{ display: 'flex', gap: '6px', fontSize: '12px', color: '#94a3b8', lineHeight: 1.4 }}>
+                        <span style={{ color: '#ef4444' }}>•</span>
+                        <span>{risk}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', padding: '20px', borderRadius: '10px' }}>
+                  <h4 style={{ fontSize: '12.5px', color: '#cbd5e1', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                    <UserCheck size={13} color="#10b981" /> RECOMMENDED TEAM SIZE
+                  </h4>
+                  <p style={{ fontSize: '12.5px', color: '#94a3b8', lineHeight: 1.5 }}>
+                    {brief.implementationRoadmap?.recommendedTeamSize}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 6. Functional & 7. Non-Functional Requirements */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
               
               {/* Functional Requirements */}
               <div className="glass-card" style={{ padding: '28px' }}>
                 <h3 style={{ fontSize: '16px', marginBottom: '16px', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <FileText size={16} color="#3b82f6" /> 5. Functional Requirements
+                  <FileText size={16} color="#3b82f6" /> 6. Functional Requirements
                 </h3>
                 <div style={{ display: 'grid', gap: '10px' }}>
                   {brief.functionalRequirements.map((req, idx) => (
@@ -802,7 +945,7 @@ export const AdvisoryHub: React.FC<AdvisoryHubProps> = ({ onNavigateToMarketplac
               {/* Non-Functional Requirements */}
               <div className="glass-card" style={{ padding: '28px' }}>
                 <h3 style={{ fontSize: '16px', marginBottom: '16px', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <ShieldAlert size={16} color="#ef4444" /> 6. Non-Functional Requirements
+                  <ShieldAlert size={16} color="#ef4444" /> 7. Non-Functional Requirements
                 </h3>
                 <div style={{ display: 'grid', gap: '14px' }}>
                   <div>
@@ -829,7 +972,7 @@ export const AdvisoryHub: React.FC<AdvisoryHubProps> = ({ onNavigateToMarketplac
               </div>
             </div>
 
-            {/* 7. Unique Spin-off Tool Idea */}
+            {/* 8. Unique Spin-off Tool Idea */}
             <div className="glass-card" style={{ padding: '32px', background: 'radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.05) 0%, transparent 60%)', border: '1px solid rgba(139, 92, 246, 0.15)' }}>
               <div style={{ display: 'inline-flex', padding: '8px', borderRadius: '8px', background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6', marginBottom: '16px' }}>
                 <Sparkles size={18} />

@@ -40,7 +40,7 @@ if (process.env.ANTHROPIC_API_KEY) {
 // REST API ENDPOINTS
 // ----------------------------------------------------
 
-// 1. Analyze Project Brief via Claude
+// 1. Analyze Project Brief via Claude (v2)
 app.post('/api/analyze', async (req, res) => {
   const { description } = req.body;
   if (!description) {
@@ -72,6 +72,12 @@ app.post('/api/analyze', async (req, res) => {
             phase2: { title: string; features: string[]; techStack: string[] };
             phase3: { title: string; features: string[]; techStack: string[] };
           };
+          implementationRoadmap: {
+            stages: { stage: string; timeframe: string; deliverable: string; owner: string }[];
+            criticalPath: string;
+            riskFlags: string[];
+            recommendedTeamSize: string;
+          };
           functionalRequirements: string[];
           nonFunctionalRequirements: {
             performance: string;
@@ -88,7 +94,7 @@ app.post('/api/analyze', async (req, res) => {
           };
         }
         Be direct, technical, insightful, and act like a YC-level advisor. Do not add markdown formatting, do not write 'Here is your JSON', return ONLY the raw JSON string.`,
-        messages: [{ role: 'user', content: `Please analyze this software request: "${description}"` }]
+        messages: [{ role: 'user', content: `Please analyze this software request and generate all sections specifically tailored to this idea: "${description}"` }]
       });
 
       const rawJson = response.content[0].text;
@@ -100,7 +106,7 @@ app.post('/api/analyze', async (req, res) => {
     }
   }
 
-  // Fallback High-Fidelity Local Compiler matching the new schema
+  // Fallback High-Fidelity Local Compiler matching the new v2 schema
   const lowerQuery = description.toLowerCase();
   
   // Extract and clean name
@@ -163,6 +169,25 @@ app.post('/api/analyze', async (req, res) => {
       'Deploy SOC2-compliant system monitoring logs and diagnostics.'
     ],
     techStack: ['Stripe', 'Chart.js', 'AWS ECS', 'CloudWatch']
+  };
+
+  let implementationRoadmap = {
+    stages: [
+      { stage: 'Discovery & Planning', timeframe: 'Weeks 1–2', deliverable: `Requirements specifications, tech stack lock, wireframe drafts for ${titleClean}.`, owner: 'PM + Architect' },
+      { stage: 'Backend Schema Design', timeframe: 'Weeks 3–4', deliverable: `PostgreSQL databases layout, RLS security configurations, API gateway maps.`, owner: 'Backend Dev' },
+      { stage: 'Frontend Component Build', timeframe: 'Weeks 5–6', deliverable: `Core UI component mockups, router mappings, state variables setup.`, owner: 'Frontend Dev' },
+      { stage: 'Core Feature Integration', timeframe: 'Weeks 7–10', deliverable: `All Phase 1 features fully live in remote staging environment.`, owner: 'Full-stack Team' },
+      { stage: 'QA & Vulnerability Audits', timeframe: 'Week 11', deliverable: `Functional testing checks, load testing, security scans.`, owner: 'QA Engineer' },
+      { stage: 'MVP Launch', timeframe: 'Week 12', deliverable: `Production launch, active logging metrics setup.`, owner: 'DevOps + PM' },
+      { stage: 'Phase 2 Enhancements', timeframe: 'Month 4+', deliverable: `Adding custom integrations and feedback iterations.`, owner: 'Full Team' }
+    ],
+    criticalPath: 'Database schema design and core API routing configuration. Front-end developers are blocked until these APIs are live in staging.',
+    riskFlags: [
+      'Scope creep concerning advanced multi-tenant specifications.',
+      'API rate-limit blockages from third-party vendor check providers.',
+      'Database lockups under high simultaneous write loads.'
+    ],
+    recommendedTeamSize: '1 Product Manager, 1 Software Architect, 1 Backend Engineer, 1 Frontend Engineer, 1 QA Specialist.'
   };
   
   let functionalRequirements = [
@@ -243,6 +268,25 @@ app.post('/api/analyze', async (req, res) => {
       ],
       techStack: ['AWS Nitro Enclaves', 'Auth0', 'S3', 'Docker']
     };
+
+    implementationRoadmap = {
+      stages: [
+        { stage: 'Security Scope & ECDH planning', timeframe: 'Weeks 1–2', deliverable: 'Cryptographic threat model, WebCrypto handshake protocol flow validation.', owner: 'Security Architect' },
+        { stage: 'Signaling Server Deployment', timeframe: 'Weeks 3–4', deliverable: 'Socket.io signaling server active on AWS, room code generator live.', owner: 'Backend Dev' },
+        { stage: 'E2E Crypto & Canvas Signature', timeframe: 'Weeks 5–6', deliverable: 'Client-side AES-GCM file chunk encryptor logic, canvas drawing captures.', owner: 'Crypto Dev' },
+        { stage: 'WebRTC Video Streams Sync', timeframe: 'Weeks 7–10', deliverable: 'Direct peer video channels live, COTURN firewall traversal active.', owner: 'WebRTC Expert' },
+        { stage: 'Penetration Testing & Purging QA', timeframe: 'Week 11', deliverable: 'Memory leak inspections, script-injection checks, socket crash audits.', owner: 'QA Engineer' },
+        { stage: 'Secure Chamber Launch', timeframe: 'Week 12', deliverable: 'Production deployment, tamper-proof JSON integrity receipts live.', owner: 'DevOps + PM' },
+        { stage: 'SSO Integrations & Nitro Enclaves', timeframe: 'Month 4+', deliverable: 'SAML enterprise logins, secure enclave indexing.', owner: 'Full Team' }
+      ],
+      criticalPath: 'Signaling server socket handshakes and COTURN traversal configurations. Ephemeral file vault is blocked until peer tunnels are verified.',
+      riskFlags: [
+        'Enterprise firewall blockages on WebRTC port bindings.',
+        'Asymmetric key performance drops on legacy mobile browsers.',
+        'File indexing lag in browser memory slots.'
+      ],
+      recommendedTeamSize: '1 PM, 1 Security/Crypto Lead, 1 WebRTC Engineer, 1 Frontend Engineer, 1 QA Engineer.'
+    };
     
     functionalRequirements = [
       'Representatives must log in using passwordless magic links verifying business domains.',
@@ -321,6 +365,25 @@ app.post('/api/analyze', async (req, res) => {
         'Deploy analytical dashboards monitoring resolution ratings.'
       ],
       techStack: ['PyTorch', 'Docker', 'AWS ECS', 'Grafana']
+    };
+
+    implementationRoadmap = {
+      stages: [
+        { stage: 'AI Scope & Ingestion Planning', timeframe: 'Weeks 1–2', deliverable: 'Chunking parameter mapping, Pinecone vector schema draft.', owner: 'AI PM + Architect' },
+        { stage: 'Vector Ingestion Pipeline', timeframe: 'Weeks 3–4', deliverable: 'Automated chunking scripts, index uploads to Pinecone database.', owner: 'Data Engineer' },
+        { stage: 'RAG API Handshakes', timeframe: 'Weeks 5–6', deliverable: 'LangChain prompt orchestrations, Claude API models sync.', owner: 'Backend Dev' },
+        { stage: 'Stream UI Dashboard', timeframe: 'Weeks 7–10', deliverable: 'React conversational window, streaming (SSE) support chat feed.', owner: 'Frontend Dev' },
+        { stage: 'Hallucination & Token Audits', timeframe: 'Week 11', deliverable: 'Model accuracy profiling, token quota controls verification.', owner: 'AI QA Engineer' },
+        { stage: 'AI Agent MVP Launch', timeframe: 'Week 12', deliverable: 'Production chatbot live, feedback loop indicators.', owner: 'DevOps + PM' },
+        { stage: 'Fine-tuning & Local Models', timeframe: 'Month 4+', deliverable: 'Local Llama model hosting, custom model tuning.', owner: 'ML Ops Team' }
+      ],
+      criticalPath: 'Document indexing pipeline and chunking accuracy checks. Conversational stream UI is blocked until the RAG API returns valid context vectors.',
+      riskFlags: [
+        'AI prompt hallucinations on highly specific technical charts.',
+        'Unexpected token billing overhead under mass query loads.',
+        'Document parsing limitations on scans and handwritten files.'
+      ],
+      recommendedTeamSize: '1 Product Manager, 1 Data/LLM Engineer, 1 Python API Dev, 1 React UI Dev, 1 QA Specialist.'
     };
     
     functionalRequirements = [
@@ -401,6 +464,25 @@ app.post('/api/analyze', async (req, res) => {
       ],
       techStack: ['TypeScript', 'Redis Cron', 'Chart.js']
     };
+
+    implementationRoadmap = {
+      stages: [
+        { stage: 'Marketplace Flow Planning', timeframe: 'Weeks 1–2', deliverable: 'Product catalog diagrams, Stripe split commission flows maps.', owner: 'Product Manager' },
+        { stage: 'DB Schema & Stripe Connect', timeframe: 'Weeks 3–4', deliverable: 'Postgres tables setup, Stripe Connect account registration live.', owner: 'Backend Dev' },
+        { stage: 'Product Catalog & Elements', timeframe: 'Weeks 5–6', deliverable: 'React product grids, Stripe checkout elements payment boxes.', owner: 'Frontend Dev' },
+        { stage: 'Webhooks & Order Processing', timeframe: 'Weeks 7–10', deliverable: 'Stripe webhook triggers, dynamic seller ledger splits, emails.', owner: 'Full-stack Dev' },
+        { stage: 'KYC Verification & Refund QA', timeframe: 'Week 11', deliverable: 'Onboarding decline workflows testing, payout conflict checks.', owner: 'QA Engineer' },
+        { stage: 'B2B Marketplace Launch', timeframe: 'Week 12', deliverable: 'Live payments enabled, platform analytics dashboard active.', owner: 'DevOps + PM' },
+        { stage: 'Metered Billing & Churn Analytics', timeframe: 'Month 4+', deliverable: 'Dynamic metered usage updates, retention charts.', owner: 'Full Team' }
+      ],
+      criticalPath: 'Stripe Connect merchant KYC verification mapping. Seller uploads and checkouts are blocked until payout ledger splits are fully verified.',
+      riskFlags: [
+        'Vendor onboarding drop-offs during identity verification checks.',
+        'Regional sales tax calculations complexity.',
+        'Vendor chargeback liability holds.'
+      ],
+      recommendedTeamSize: '1 Product Manager, 1 Payment Backend Engineer, 1 React UI Engineer, 1 QA Auditor.'
+    };
     
     functionalRequirements = [
       'Customers must be able to search and buy digital goods.',
@@ -444,6 +526,7 @@ app.post('/api/analyze', async (req, res) => {
       phase2,
       phase3
     },
+    implementationRoadmap,
     functionalRequirements,
     nonFunctionalRequirements,
     spinoff
@@ -496,7 +579,6 @@ This Agreement is entered into on this Effective Date by and between Client Part
 
 // 3. Expose Developers Registry
 app.get('/api/developers', (req, res) => {
-  // Simple JSON API endpoint to fetch developers list
   res.json({ success: true });
 });
 
@@ -506,39 +588,30 @@ app.get('/api/developers', (req, res) => {
 io.on('connection', (socket) => {
   console.log(`Socket client connected: ${socket.id}`);
 
-  // Join a secure private deal room namespace
   socket.on('join-room', (roomId) => {
     socket.join(roomId);
     console.log(`Socket ${socket.id} joined secure room: ${roomId}`);
-    
-    // Notify peer in the room
     socket.to(roomId).emit('peer-connected', { peerId: socket.id });
   });
 
-  // Relay WebRTC SDP signal offer/answer/ICE candidates
   socket.on('signal', ({ roomId, data }) => {
     socket.to(roomId).emit('signal-receive', data);
   });
 
-  // Broadcast encrypted chat message
   socket.on('chat-message', ({ roomId, message }) => {
     socket.to(roomId).emit('chat-message-receive', message);
   });
 
-  // Broadcast uploaded file meta attachments
   socket.on('file-upload', ({ roomId, file }) => {
     socket.to(roomId).emit('file-upload-receive', file);
   });
 
-  // Sync peer state toggles (Camera, Mic, Screen Share)
   socket.on('peer-state-change', ({ roomId, state }) => {
     socket.to(roomId).emit('peer-state-change-receive', state);
   });
 
-  // Trigger Ephemeral Session Wipe
   socket.on('wipe-session', ({ roomId, auditLog }) => {
     console.log(`Cryptographic wipe command executed for room: ${roomId}`);
-    // Broadcast matrix scrub command and audit receipt log to both peers
     io.to(roomId).emit('session-wiped', auditLog);
   });
 
