@@ -512,7 +512,6 @@ function App() {
               initialFilters={advisoryFilters}
               onOpenDealRoom={handleOpenDealRoom}
               developersList={developers}
-              onRefetchDevelopers={fetchDevelopers}
             />
           )}
 
