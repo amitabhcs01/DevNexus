@@ -5,7 +5,7 @@ import {
   ArrowRight, Share2, DollarSign, Loader2
 } from 'lucide-react';
 import type { ChatMessage, EphemeralFile } from '../types';
-import { io } from 'socket.io-client';
+import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 interface DealRoomProps {
   defaultPartner?: string;
@@ -16,7 +16,7 @@ export const DealRoom = ({ defaultPartner = 'Amazon Web Services', onNavigateToD
   const [sessionState, setSessionState] = useState<'dashboard' | 'setup' | 'signed' | 'active' | 'wiped'>('dashboard');
   const [loading, setLoading] = useState(false);
 
-  // Active Deal Rooms loaded from backend
+  // Active Deal Rooms loaded from backend/Supabase
   const [dealRooms, setDealRooms] = useState<any[]>([]);
 
   // Setup form state
@@ -28,7 +28,7 @@ export const DealRoom = ({ defaultPartner = 'Amazon Web Services', onNavigateToD
   const [repB, setRepB] = useState('Andy Jassy (CEO)');
   const [ndaType, setNdaType] = useState('Corporate Mutual Non-Disclosure Agreement');
   const [ipClauses, setIpClauses] = useState('All background intellectual property remains vested in original owner; foreground IP is shared equally.');
-  const duration = '5 Years';
+  const [duration, setDuration] = useState('5 Years');
   const [jurisdiction, setJurisdiction] = useState('Delaware Chancery Court');
   
   // Deal Terms State
@@ -61,18 +61,7 @@ export const DealRoom = ({ defaultPartner = 'Amazon Web Services', onNavigateToD
   const [wipeConsoleLogs, setWipeConsoleLogs] = useState<string[]>([]);
   const [auditLogContent, setAuditLogContent] = useState<string>('');
 
-  // Sockets & Refs
-  const socketRef = useRef<any>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
-
-  // Resolve backend URL
-  const getBackendUrl = () => {
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return 'http://localhost:5000';
-    }
-    return window.location.origin + '/_/backend';
-  };
-  const BACKEND_URL = getBackendUrl();
 
   // Load Rooms list on mount
   useEffect(() => {
@@ -80,106 +69,72 @@ export const DealRoom = ({ defaultPartner = 'Amazon Web Services', onNavigateToD
   }, []);
 
   const fetchActiveRooms = async () => {
-    try {
-      // Simulate loading from seeded data or get active rooms if they exist
+    if (!isSupabaseConfigured) {
       const mockRooms = [
         { code: 'NEX-MSFT-AMZN', title: 'Cloud Infrastructure Service Agreement', partyA: 'Microsoft Corporation', partyB: 'Amazon Web Services', status: 'active', date: '2026-06-25' },
         { code: 'NEX-APPL-TSMC', title: 'Semiconductor Supply Chain Agreement', partyA: 'Apple Inc.', partyB: 'TSMC Ltd.', status: 'signed', date: '2026-06-20' }
       ];
       setDealRooms(mockRooms);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('rooms')
+        .select('*');
+      if (error) throw error;
+      if (data) {
+        setDealRooms(data.map(room => ({
+          code: room.access_code,
+          title: room.title || 'Strategic Agreement',
+          partyA: room.party_a,
+          partyB: room.party_b,
+          status: room.status,
+          date: new Date(room.created_at).toLocaleDateString()
+        })));
+      }
     } catch (err) {
-      console.error(err);
+      console.error('Failed to load active rooms from Supabase:', err);
     }
   };
 
-  // Socket Connection Lifecycle
+  // Realtime Supabase Subscription
   useEffect(() => {
-    if (sessionState === 'active' && roomId) {
-      // Connect socket.io
-      const socket = io(BACKEND_URL);
-      socketRef.current = socket;
-
-      socket.emit('join-room', roomId);
-
-      // Handle Socket.io events
-      socket.on('peer-join', () => {
-        setMessages(prev => [
-          ...prev,
+    if (sessionState === 'active' && roomId && isSupabaseConfigured) {
+      const channel = supabase
+        .channel(`room:${roomId}`)
+        .on(
+          'postgres_changes',
           {
-            id: `sys-${Math.random()}`,
-            sender: 'System',
-            senderName: 'System',
-            text: 'Representative from peer business connected. Secure tunnel established.',
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            isEncrypted: false
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'rooms',
+            filter: `access_code=eq.${roomId}`
+          },
+          (payload) => {
+            const updatedRoom = payload.new;
+            if (updatedRoom) {
+              if (updatedRoom.messages) setMessages(updatedRoom.messages);
+              if (updatedRoom.files) setFiles(updatedRoom.files);
+              if (updatedRoom.status) setDealStatus(updatedRoom.status);
+              if (updatedRoom.nda_signed_a !== undefined) setSignedA(updatedRoom.nda_signed_a);
+              if (updatedRoom.nda_signed_b !== undefined) setSignedB(updatedRoom.nda_signed_b);
+              if (updatedRoom.deal_terms) {
+                setDealValue(updatedRoom.deal_terms.value);
+                setDealCurrency(updatedRoom.deal_terms.currency || 'USD');
+                setDealDeadline(updatedRoom.deal_terms.deadline || '2026-12-31');
+                setDealConditions(updatedRoom.deal_terms.conditions || '');
+              }
+              if (updatedRoom.status === 'wiped') {
+                handleRemoteWipe(updatedRoom.deal_terms); // Wipe audit log stored in terms
+              }
+            }
           }
-        ]);
-      });
-
-      socket.on('chat-message-receive', (msg: any) => {
-        setMessages(prev => {
-          if (prev.some(m => m.id === msg.id)) return prev;
-          return [...prev, msg];
-        });
-      });
-
-      socket.on('message:new', (msg: any) => {
-        setMessages(prev => {
-          const formatted: ChatMessage = {
-            id: msg.id,
-            sender: msg.senderId === 'client' ? 'PartyA' : 'PartyB',
-            senderName: msg.senderName,
-            text: msg.content,
-            timestamp: msg.timestamp,
-            isEncrypted: true
-          };
-          if (prev.some(m => m.id === formatted.id)) return prev;
-          return [...prev, formatted];
-        });
-      });
-
-      socket.on('file-upload-receive', (file: any) => {
-        setFiles(prev => {
-          if (prev.some(f => f.name === file.name)) return prev;
-          return [...prev, file];
-        });
-      });
-
-      socket.on('file:uploaded', (file: any) => {
-        setFiles(prev => {
-          if (prev.some(f => f.name === file.name)) return prev;
-          return [...prev, file];
-        });
-      });
-
-      socket.on('nda:signed', ({ party }: any) => {
-        if (party === 'PartyA') setSignedA(true);
-        if (party === 'PartyB') setSignedB(true);
-      });
-
-      socket.on('deal:statusChange', ({ status, dealTerms }: any) => {
-        if (status) setDealStatus(status);
-        if (dealTerms) {
-          setDealValue(dealTerms.value);
-          setDealCurrency(dealTerms.currency);
-          setDealDeadline(dealTerms.deadline);
-          setDealConditions(dealTerms.conditions);
-        }
-      });
-
-      socket.on('session-wiped', (auditLog: any) => {
-        handleRemoteWipe(auditLog);
-      });
-
-      socket.on('broadcast', ({ event, payload }: any) => {
-        if (event === 'wipe') {
-          handleRemoteWipe(payload);
-        }
-      });
+        )
+        .subscribe();
 
       return () => {
-        socket.disconnect();
-        socketRef.current = null;
+        supabase.removeChannel(channel);
       };
     }
   }, [sessionState, roomId]);
@@ -202,122 +157,129 @@ export const DealRoom = ({ defaultPartner = 'Amazon Web Services', onNavigateToD
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Fetch Room from API on Enter
+  // Join Room from DB
   const handleJoinDealRoom = async (code: string) => {
+    if (!code) return;
     setLoading(true);
     try {
-      const res = await fetch(`${BACKEND_URL}/api/dealroom/${code}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.dealroom) {
-          const room = data.dealroom;
-          setRoomId(room.id);
-          setDealTitle(room.title);
-          setDealStatus(room.status);
-          setMessages(room.messages.map((m: any) => ({
-            id: m.id,
-            sender: m.senderId === 'client' ? 'PartyA' : 'PartyB',
-            senderName: m.senderName,
-            text: m.content,
-            timestamp: m.timestamp,
-            isEncrypted: true
-          })));
-          setFiles(room.files);
-          setDealValue(room.dealTerms.value);
-          setDealCurrency(room.dealTerms.currency);
-          setDealDeadline(room.dealTerms.deadline);
-          setDealConditions(room.dealTerms.conditions);
-          
-          if (room.ndaStatus === 'signed') {
-            setSignedA(true);
-            setSignedB(true);
-            setSessionState('active');
-          } else {
-            setSessionState('setup');
-          }
-          return;
-        }
+      if (!isSupabaseConfigured) {
+        setRoomId(code);
+        setSessionState('setup');
+        return;
       }
-      
-      // Fallback create on-the-fly if not found
-      await handleCreateDealRoom(code);
-    } catch (err) {
+
+      const { data: room, error } = await supabase
+        .from('rooms')
+        .select('*')
+        .eq('access_code', code)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (room) {
+        setRoomId(room.access_code);
+        setDealTitle(room.title || 'Strategic Partnership Agreement');
+        setPartyA(room.party_a);
+        setPartyB(room.party_b);
+        setSignedA(room.nda_signed_a);
+        setSignedB(room.nda_signed_b);
+        setMessages(room.messages || []);
+        setFiles(room.files || []);
+        setDealStatus(room.status || 'negotiating');
+        if (room.deal_terms) {
+          setDealValue(room.deal_terms.value);
+          setDealCurrency(room.deal_terms.currency || 'USD');
+          setDealDeadline(room.deal_terms.deadline || '2026-12-31');
+          setDealConditions(room.deal_terms.conditions || '');
+        }
+
+        if (room.nda_signed_a && room.nda_signed_b) {
+          setSessionState('active');
+        } else {
+          setSessionState('setup');
+        }
+      } else {
+        // Create on-the-fly
+        await handleCreateDealRoom(code);
+      }
+    } catch (err: any) {
       console.error(err);
-      await handleCreateDealRoom(code);
+      alert(`Supabase Error: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
+  // Create Room directly in Supabase
   const handleCreateDealRoom = async (code?: string) => {
     const finalCode = code || 'NEX-' + partyA.substring(0, 4).toUpperCase() + '-' + partyB.substring(0, 4).toUpperCase();
-    setRoomId(finalCode);
     
+    if (!isSupabaseConfigured) {
+      setRoomId(finalCode);
+      setSessionState('setup');
+      return;
+    }
+
     const roomPayload = {
-      id: finalCode,
+      access_code: finalCode,
       title: dealTitle,
-      createdBy: partyA,
-      parties: [
-        { userId: 'client', companyName: partyA, role: 'PartyA' },
-        { userId: 'developer', companyName: partyB, role: 'PartyB' }
-      ],
-      dealTerms: {
+      party_a: partyA,
+      party_b: partyB,
+      nda_signed_a: signedA,
+      nda_signed_b: signedB,
+      messages: [],
+      files: [],
+      deal_terms: {
         value: dealValue,
         currency: dealCurrency,
         deadline: dealDeadline,
         conditions: dealConditions
-      }
+      },
+      status: 'negotiating'
     };
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/dealroom/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(roomPayload)
-      });
-      if (res.ok) {
-        setSessionState('setup');
-      }
-    } catch (err) {
-      console.error('Failed to create dealroom, running offline setup:', err);
+      const { error } = await supabase
+        .from('rooms')
+        .insert(roomPayload);
+      if (error) throw error;
+      setRoomId(finalCode);
       setSessionState('setup');
+    } catch (err: any) {
+      console.error('Failed to create dealroom in Supabase:', err);
+      alert(`Supabase Error: ${err.message}`);
     }
   };
 
-  // Chat Actions
+  // Send Chat message
   const sendMessage = async () => {
     if (!inputText.trim()) return;
 
     const senderName = signingAs === 'repA' ? repA : repB;
     const senderCompany = signingAs === 'repA' ? partyA : partyB;
 
-    const messagePayload = {
-      senderId: signingAs === 'repA' ? 'client' : 'developer',
+    const newMsg: ChatMessage = {
+      id: Math.random().toString(),
+      sender: signingAs === 'repA' ? 'PartyA' : 'PartyB',
       senderName: `${senderName} (${senderCompany})`,
-      content: inputText
+      text: inputText,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isEncrypted: true
     };
 
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/dealroom/${roomId}/message`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(messagePayload)
-      });
-      if (res.ok) {
-        setInputText('');
+    const updatedMessages = [...messages, newMsg];
+    setMessages(updatedMessages);
+    setInputText('');
+
+    if (isSupabaseConfigured && roomId) {
+      try {
+        await supabase
+          .from('rooms')
+          .update({ messages: updatedMessages })
+          .eq('access_code', roomId);
+      } catch (err) {
+        console.error('Failed to save message to Supabase:', err);
       }
-    } catch (err) {
-      // Local fallback
-      const localMsg: ChatMessage = {
-        id: Math.random().toString(),
-        sender: signingAs === 'repA' ? 'PartyA' : 'PartyB',
-        senderName: `${senderName} (${senderCompany})`,
-        text: inputText,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        isEncrypted: true
-      };
-      setMessages(prev => [...prev, localMsg]);
-      setInputText('');
     }
   };
 
@@ -361,40 +323,47 @@ export const DealRoom = ({ defaultPartner = 'Amazon Web Services', onNavigateToD
   };
 
   const confirmSignature = async () => {
-    const activeParty = signingAs === 'repA' ? 'PartyA' : 'PartyB';
-    const activeRep = signingAs === 'repA' ? repA : repB;
-    
-    try {
-      await fetch(`${BACKEND_URL}/api/dealroom/${roomId}/nda`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status: 'signed',
-          representative: activeRep,
-          party: activeParty
-        })
-      });
-    } catch (err) {
-      console.error(err);
-    }
-    
-    if (signingAs === 'repA') {
+    const isA = signingAs === 'repA';
+    const updates: any = {};
+    if (isA) {
+      updates.nda_signed_a = true;
       setSignedA(true);
-      // Simulate counter-sign
-      setTimeout(() => {
-        setSignedB(true);
-      }, 1500);
     } else {
+      updates.nda_signed_b = true;
       setSignedB(true);
+    }
+
+    if (isSupabaseConfigured && roomId) {
+      try {
+        await supabase
+          .from('rooms')
+          .update(updates)
+          .eq('access_code', roomId);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // Direct simulation counter-signing
+    if (isA) {
+      setTimeout(async () => {
+        setSignedB(true);
+        if (isSupabaseConfigured && roomId) {
+          await supabase
+            .from('rooms')
+            .update({ nda_signed_b: true })
+            .eq('access_code', roomId);
+        }
+      }, 1500);
     }
   };
 
-  // File Upload
+  // Proposal Vault File upload
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const filePayload = {
+    const newFile: EphemeralFile = {
       name: file.name,
       size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
       type: file.type,
@@ -402,78 +371,76 @@ export const DealRoom = ({ defaultPartner = 'Amazon Web Services', onNavigateToD
       uploadedBy: signingAs === 'repA' ? partyA : partyB
     };
 
-    try {
-      await fetch(`${BACKEND_URL}/api/dealroom/${roomId}/files`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(filePayload)
-      });
-    } catch (err) {
-      setFiles(prev => [...prev, { ...filePayload, contentMock: 'Draft terms uploaded (offline fallback).' }]);
-    }
-  };
+    const updatedFiles = [...files, newFile];
+    setFiles(updatedFiles);
 
-  // Sync Deal Terms Changes
-  const handleUpdateDealTerms = async (updatedTerms: any) => {
-    try {
-      await fetch(`${BACKEND_URL}/api/dealroom/${roomId}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          dealTerms: updatedTerms
-        })
-      });
-      // Broadcast via socket
-      if (socketRef.current) {
-        socketRef.current.emit('terms-change', { roomId, dealTerms: updatedTerms });
+    if (isSupabaseConfigured && roomId) {
+      try {
+        await supabase
+          .from('rooms')
+          .update({ files: updatedFiles })
+          .eq('access_code', roomId);
+      } catch (err) {
+        console.error('Failed to sync files to Supabase:', err);
       }
-    } catch (err) {
-      console.error(err);
     }
   };
 
+  // Sync Deal Terms Updates
+  const handleUpdateDealTerms = async (updatedTerms: any) => {
+    if (isSupabaseConfigured && roomId) {
+      try {
+        await supabase
+          .from('rooms')
+          .update({ deal_terms: updatedTerms })
+          .eq('access_code', roomId);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
+  // Update Room Status
   const handleUpdateStatus = async (newStatus: string) => {
-    try {
-      await fetch(`${BACKEND_URL}/api/dealroom/${roomId}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status: newStatus
-        })
-      });
-    } catch (err) {
-      setDealStatus(newStatus);
+    setDealStatus(newStatus);
+    if (isSupabaseConfigured && roomId) {
+      try {
+        await supabase
+          .from('rooms')
+          .update({ status: newStatus })
+          .eq('access_code', roomId);
+      } catch (err) {
+        console.error(err);
+      }
     }
   };
 
-  // Invite external party
+  // Invite external company
   const handleInviteParty = async () => {
     if (!inviteCompanyName.trim()) return;
 
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/dealroom/${roomId}/invite`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          companyName: inviteCompanyName,
-          role: 'PartyB'
-        })
-      });
-      if (res.ok) {
-        setInviteCompanyName('');
-        showToastAlert(`Invited ${inviteCompanyName} successfully.`);
+    setPartyB(inviteCompanyName);
+    const updatedName = inviteCompanyName;
+    setInviteCompanyName('');
+
+    if (isSupabaseConfigured && roomId) {
+      try {
+        const { error } = await supabase
+          .from('rooms')
+          .update({ party_b: updatedName })
+          .eq('access_code', roomId);
+        if (error) throw error;
+        alert(`Invited ${updatedName} successfully.`);
+      } catch (err: any) {
+        console.error('Failed to invite party via Supabase:', err);
       }
-    } catch (err) {
-      console.error(err);
+    } else {
+      alert(`Invited ${updatedName} successfully (Local).`);
     }
   };
 
-  const showToastAlert = (text: string) => {
-    alert(text);
-  };
-
   // Cryptographic Wipe
-  const triggerWipe = () => {
+  const triggerWipe = async () => {
     const receipt = {
       roomId,
       title: dealTitle,
@@ -483,8 +450,21 @@ export const DealRoom = ({ defaultPartner = 'Amazon Web Services', onNavigateToD
       timestamp: new Date().toISOString()
     };
 
-    if (socketRef.current) {
-      socketRef.current.emit('wipe-session', { roomId, auditLog: receipt });
+    if (isSupabaseConfigured && roomId) {
+      try {
+        await supabase
+          .from('rooms')
+          .update({
+            status: 'wiped',
+            messages: [],
+            files: [],
+            deal_terms: receipt
+          })
+          .eq('access_code', roomId);
+      } catch (err) {
+        console.error('Failed to wipe room in Supabase:', err);
+        handleRemoteWipe(receipt);
+      }
     } else {
       handleRemoteWipe(receipt);
     }
@@ -823,7 +803,7 @@ export const DealRoom = ({ defaultPartner = 'Amazon Web Services', onNavigateToD
             </div>
             <h2 style={{ fontSize: '24px', marginBottom: '8px' }}>Access Key Generated</h2>
             <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: 1.6, marginBottom: '32px' }}>
-              The agreement has been verified and registered. The access key provides entry into the encrypted WebRTC/Socket deal room tunnel.
+              The agreement has been verified and registered. The access key provides entry into the encrypted WebRTC deal room tunnel.
             </p>
 
             <div style={{

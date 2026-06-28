@@ -8,6 +8,7 @@ import { Auth } from './components/Auth';
 import { LoggedInHome } from './components/LoggedInHome';
 import { ProfileManager } from './components/ProfileManager';
 import { supabase } from './supabaseClient';
+import { mockDevelopers } from './data/mockData';
 import { Cpu, Users, EyeOff, BarChart3, Home, Shield, Clock, LogOut, Menu, X, User } from 'lucide-react';
 
 type TabType = 'landing' | 'advisory' | 'marketplace' | 'dealroom' | 'dashboard' | 'profile';
@@ -34,25 +35,67 @@ function App() {
   const [developers, setDevelopers] = useState<any[]>([]);
   const [currentDeveloper, setCurrentDeveloper] = useState<any | null>(null);
 
-  const getBackendUrl = () => {
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return 'http://localhost:5000';
-    }
-    return window.location.origin + '/_/backend';
-  };
-  const BACKEND_URL = getBackendUrl();
-
   const fetchDevelopers = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/developers`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.developers) {
-          setDevelopers(data.developers);
-        }
+      const { data, error } = await supabase
+        .from('developers')
+        .select('*');
+      
+      if (error) throw error;
+      
+      if (data) {
+        const mapped = data.map((d: any) => {
+          let location = d.location || 'Remote';
+          let projectPortfolio = [];
+          let workHistory = [];
+          let education = [];
+          let certifications = [];
+          let cleanBio = d.bio || '';
+
+          if (cleanBio.includes('===METADATA===')) {
+            try {
+              const parts = cleanBio.split('===METADATA===');
+              cleanBio = parts[0].trim();
+              const meta = JSON.parse(parts[1].trim());
+              location = meta.location || location;
+              projectPortfolio = meta.projectPortfolio || [];
+              workHistory = meta.workHistory || [];
+              education = meta.education || [];
+              certifications = meta.certifications || [];
+            } catch (e) {
+              console.error('Failed to parse bio metadata:', e);
+            }
+          }
+
+          return {
+            id: d.id,
+            name: d.name,
+            title: d.title,
+            avatar: d.avatar,
+            bio: cleanBio,
+            skills: d.skills || [],
+            hourlyRate: d.hourly_rate,
+            availability: d.availability,
+            rating: d.rating,
+            reviewsCount: d.reviews_count || 0,
+            reviews: [],
+            gitHubUsername: d.git_username || '',
+            githubRepos: [],
+            projectHistory: [],
+            verified: d.verified,
+            niche: d.niche,
+            location,
+            projectPortfolio,
+            workHistory,
+            education,
+            certifications
+          };
+        });
+        setDevelopers(mapped);
       }
     } catch (err) {
-      console.error('Failed to fetch developers list:', err);
+      console.warn('Failed to fetch developers from Supabase, falling back to local mocks:', err);
+      setDevelopers(mockDevelopers.map(d => ({ ...d, techStack: d.skills })));
     }
   };
 

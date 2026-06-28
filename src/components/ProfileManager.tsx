@@ -151,20 +151,6 @@ export const ProfileManager: React.FC<ProfileManagerProps> = ({
     (updatedDev as any).certifications = certifications;
 
     try {
-      // 1. Save to Backend Database API
-      const response = await fetch('http://localhost:5000/api/profile/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: currentDeveloper.id,
-          developer: updatedDev
-        })
-      });
-
-      if (!response.ok) throw new Error('Backend failed to update profile');
-      await response.json();
-
-      // 2. Save to Supabase if configured
       if (isSupabaseConfigured) {
         // Prepare bio string with serialized portfolio data to bypass schema limitations
         const serializedMetadata = JSON.stringify({
@@ -176,12 +162,39 @@ export const ProfileManager: React.FC<ProfileManagerProps> = ({
         });
         const combinedBio = `${bio}\n\n===METADATA===\n${serializedMetadata}`;
 
+        // 1. Update profiles table directly
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            full_name: name,
+            corporate_title: title,
+            bio,
+            avatar,
+            hourly_rate: Number(hourlyRate),
+            key_skills: skills.join(', '),
+            github_username: gitHubUsername,
+            portfolio_link: gitHubUsername ? `https://github.com/${gitHubUsername}` : '',
+            availability,
+            location,
+            work_history: workHistory,
+            certifications,
+            education,
+            project_portfolio: projectPortfolio
+          })
+          .eq('id', currentDeveloper.id);
+
+        if (profileError) {
+          throw new Error(`profiles table update failed: ${profileError.message}`);
+        }
+
+        // 2. Sync to developers table
         const { error: devError } = await supabase
           .from('developers')
           .update({
             name,
             title,
             bio: combinedBio,
+            avatar,
             skills,
             hourly_rate: Number(hourlyRate),
             availability,
@@ -191,20 +204,10 @@ export const ProfileManager: React.FC<ProfileManagerProps> = ({
           .eq('id', currentDeveloper.id);
 
         if (devError) {
-          console.warn('Supabase developers update skipped/failed, fallback to API:', devError.message);
+          console.warn('Supabase developers update failed/skipped:', devError.message);
         }
-
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            full_name: name,
-            key_skills: skills.join(', '),
-            portfolio_link: gitHubUsername ? `https://github.com/${gitHubUsername}` : '',
-            hourly_rate: Number(hourlyRate)
-          })
-          .eq('id', currentDeveloper.id);
-          
-        if (profileError) console.warn('Supabase profiles update skipped:', profileError.message);
+      } else {
+        console.log('Supabase not configured. Mocking save operation locally.');
       }
 
       onProfileUpdated(updatedDev);

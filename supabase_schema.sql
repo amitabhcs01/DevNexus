@@ -110,6 +110,11 @@ CREATE TABLE IF NOT EXISTS public.rooms (
     party_b TEXT NOT NULL,
     nda_signed_a BOOLEAN DEFAULT false,
     nda_signed_b BOOLEAN DEFAULT false,
+    title TEXT,
+    messages JSONB DEFAULT '[]'::jsonb,
+    files JSONB DEFAULT '[]'::jsonb,
+    deal_terms JSONB DEFAULT '{"value": 1200000, "currency": "USD", "deadline": "2026-12-31", "conditions": ""}'::jsonb,
+    status TEXT DEFAULT 'negotiating',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -186,6 +191,15 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     portfolio_link TEXT,
     password_hash TEXT,
     hourly_rate INTEGER,
+    bio TEXT,
+    avatar TEXT,
+    github_username TEXT,
+    availability TEXT,
+    location TEXT,
+    work_history JSONB DEFAULT '[]'::jsonb,
+    certifications JSONB DEFAULT '[]'::jsonb,
+    education JSONB DEFAULT '[]'::jsonb,
+    project_portfolio JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -204,20 +218,34 @@ ON public.profiles FOR UPDATE
 USING (auth.uid() = id);
 
 -- Seed default profiles for demonstration
-INSERT INTO public.profiles (id, email, role, company_name, corporate_title, project_budget, full_name, key_skills, experience_level, portfolio_link, password_hash, hourly_rate)
+INSERT INTO public.profiles (id, email, role, company_name, corporate_title, project_budget, full_name, key_skills, experience_level, portfolio_link, password_hash, hourly_rate, bio, avatar, github_username, availability, location, work_history, certifications, education, project_portfolio)
 VALUES
-('00000000-0000-0000-0000-000000000001', 'admin@devnexus.local', 'admin', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'c05d76d4994276707a00f13511eb0fa7e268a73b3eb72f10b78c93ef859ff7b8', NULL),
-('00000000-0000-0000-0000-000000000002', 'client@devnexus.local', 'client', 'Nexus Capital', 'Managing Partner', 150000, NULL, NULL, NULL, NULL, '030737a4db77c687e14bdbe39cdfeebfbca65a58a74e548ad7cd6cdcfb577484', NULL),
-('00000000-0000-0000-0000-000000000003', 'developer@devnexus.local', 'developer', NULL, NULL, NULL, 'Alex Rivers', 'React, WebRTC, Node.js', 'senior', 'https://github.com/alexrivers', '22a101f3cf65d9c7bb7ec32057d3835697d268d0de1f1737be2e6ea9bf472251', 115),
-('00000000-0000-0000-0000-000000000004', 'chloe.zhao@devnexus.local', 'developer', NULL, NULL, NULL, 'Chloe Zhao', 'React, Next.js, Framer Motion', 'senior', 'https://github.com/chloez-design', '22a101f3cf65d9c7bb7ec32057d3835697d268d0de1f1737be2e6ea9bf472251', 125),
-('00000000-0000-0000-0000-000000000005', 'john.founder@acme.com', 'client', 'Acme Corp', 'CEO & Founder', 35000, NULL, NULL, NULL, NULL, '030737a4db77c687e14bdbe39cdfeebfbca65a58a74e548ad7cd6cdcfb577484', NULL)
+('00000000-0000-0000-0000-000000000001', 'admin@devnexus.local', 'admin', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'c05d76d4994276707a00f13511eb0fa7e268a73b3eb72f10b78c93ef859ff7b8', NULL, NULL, NULL, NULL, NULL, NULL, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb),
+('00000000-0000-0000-0000-000000000002', 'client@devnexus.local', 'client', 'Nexus Capital', 'Managing Partner', 150000, NULL, NULL, NULL, NULL, '030737a4db77c687e14bdbe39cdfeebfbca65a58a74e548ad7cd6cdcfb577484', NULL, NULL, NULL, NULL, NULL, NULL, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb),
+('00000000-0000-0000-0000-000000000003', 'developer@devnexus.local', 'developer', NULL, 'Senior WebRTC Engineer', NULL, 'Alex Rivers', 'React, WebRTC, Node.js', 'senior', 'https://github.com/alexrivers', '22a101f3cf65d9c7bb7ec32057d3835697d268d0de1f1737be2e6ea9bf472251', 115, 'Specialist in real-time collaboration applications.', 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=150&q=80', 'alexrivers-dev', 'Available Now', 'San Francisco, CA', '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb),
+('00000000-0000-0000-0000-000000000004', 'chloe.zhao@devnexus.local', 'developer', NULL, 'Senior UI/UX & React Engineer', NULL, 'Chloe Zhao', 'React, Next.js, Framer Motion', 'senior', 'https://github.com/chloez-design', '22a101f3cf65d9c7bb7ec32057d3835697d268d0de1f1737be2e6ea9bf472251', 125, 'Focused on creating high-performance, visually stunning React interfaces.', 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80', 'chloez-design', 'Available Now', 'New York, NY', '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb),
+('00000000-0000-0000-0000-000000000005', 'john.founder@acme.com', 'client', 'Acme Corp', 'CEO & Founder', 35000, NULL, NULL, NULL, NULL, '030737a4db77c687e14bdbe39cdfeebfbca65a58a74e548ad7cd6cdcfb577484', NULL, NULL, NULL, NULL, NULL, NULL, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb)
 ON CONFLICT (id) DO NOTHING;
 
 -- Trigger function to auto-sync profiles -> developers
 CREATE OR REPLACE FUNCTION public.sync_profile_to_developer()
 RETURNS TRIGGER AS $$
+DECLARE
+    combined_bio TEXT;
+    serialized_meta TEXT;
 BEGIN
     IF NEW.role = 'developer' THEN
+        -- Serialize metadata JSON to store inside combined bio for standard developers compatibility
+        serialized_meta := json_build_object(
+            'location', COALESCE(NEW.location, 'Remote'),
+            'projectPortfolio', COALESCE(NEW.project_portfolio, '[]'::jsonb),
+            'workHistory', COALESCE(NEW.work_history, '[]'::jsonb),
+            'education', COALESCE(NEW.education, '[]'::jsonb),
+            'certifications', COALESCE(NEW.certifications, '[]'::jsonb)
+        )::text;
+        
+        combined_bio := COALESCE(NEW.bio, '') || E'\n\n===METADATA===\n' || serialized_meta;
+
         INSERT INTO public.developers (
             id,
             name,
@@ -237,21 +265,26 @@ BEGIN
             NEW.id::text,
             COALESCE(NEW.full_name, split_part(NEW.email, '@', 1)),
             COALESCE(NEW.corporate_title, 'Full Stack Engineer'),
-            'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-            'Specialist in ' || COALESCE(NEW.key_skills, 'software development') || '.',
+            COALESCE(NEW.avatar, 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'),
+            combined_bio,
             COALESCE(string_to_array(NEW.key_skills, ', '), ARRAY['React', 'Node.js']),
             COALESCE(NEW.hourly_rate, 100),
-            'Available Now',
+            COALESCE(NEW.availability, 'Available Now'),
             5.0,
             0,
-            COALESCE(split_part(NEW.portfolio_link, 'github.com/', 2), ''),
+            COALESCE(NEW.github_username, ''),
             'SaaS Software Development',
             false
         )
         ON CONFLICT (id) DO UPDATE SET
             name = EXCLUDED.name,
-            hourly_rate = COALESCE(EXCLUDED.hourly_rate, public.developers.hourly_rate),
-            git_username = COALESCE(NULLIF(EXCLUDED.git_username, ''), public.developers.git_username);
+            title = EXCLUDED.title,
+            bio = EXCLUDED.bio,
+            avatar = EXCLUDED.avatar,
+            skills = EXCLUDED.skills,
+            hourly_rate = EXCLUDED.hourly_rate,
+            availability = EXCLUDED.availability,
+            git_username = EXCLUDED.git_username;
     END IF;
     RETURN NEW;
 END;

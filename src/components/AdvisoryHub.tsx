@@ -42,44 +42,22 @@ export const AdvisoryHub: React.FC<AdvisoryHubProps> = ({ onNavigateToMarketplac
     setIsAnalyzing(true);
     setBrief(null);
 
-    // Simulate backend handshake or hit API, then parse into high fidelity YC advisor format
     try {
-      const res = await fetch('http://localhost:5000/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: inputQuery })
-      });
-      
-      if (!res.ok) throw new Error('API server down');
-      
-      const data = await res.json();
-      
-      // Inject YC advisor sections if the backend returns the old legacy schema
-      if (!data.overview) {
-        const compiled = compileAdvisoryReport(inputQuery);
-        // Override with backend estimations if available
-        compiled.title = data.title || compiled.title;
-        compiled.techStack = data.techStack || compiled.techStack;
-        compiled.estimatedCost = data.estimatedCost || compiled.estimatedCost;
-        compiled.estimatedTimeline = data.estimatedTimeline || compiled.estimatedTimeline;
-        setBrief(compiled);
-      } else {
-        setBrief(data);
-      }
+      const compiledReport = compileAdvisoryReport(inputQuery);
+      setBrief(compiledReport);
 
       // Save to Supabase Database if credentials are set
       if (isSupabaseConfigured) {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          const compiledReport = compileAdvisoryReport(inputQuery);
           const { error } = await supabase.from('briefs').insert({
-            id: data.id || compiledReport.id,
+            id: compiledReport.id,
             user_id: user.id,
-            title: data.title || compiledReport.title,
+            title: compiledReport.title,
             description: inputQuery,
-            tech_stack: data.techStack || compiledReport.techStack,
-            estimated_cost: data.estimatedCost || compiledReport.estimatedCost,
-            estimated_timeline: data.estimatedTimeline || compiledReport.estimatedTimeline,
+            tech_stack: compiledReport.techStack,
+            estimated_cost: compiledReport.estimatedCost,
+            estimated_timeline: compiledReport.estimatedTimeline,
             architecture: compiledReport.overview,
             features: compiledReport.functionalRequirements,
             risks: compiledReport.spinoff
@@ -89,10 +67,7 @@ export const AdvisoryHub: React.FC<AdvisoryHubProps> = ({ onNavigateToMarketplac
         }
       }
     } catch (err) {
-      console.warn('Backend server down. Compiling high-fidelity brief locally:', err);
-      // Compile the report locally with YC advisor standards
-      const localReport = compileAdvisoryReport(inputQuery);
-      setBrief(localReport);
+      console.error('Error compiling/saving brief:', err);
     } finally {
       setIsAnalyzing(false);
     }
