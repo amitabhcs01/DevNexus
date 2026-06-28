@@ -6,6 +6,7 @@ import { DealRoom } from './components/DealRoom';
 import { Dashboard } from './components/Dashboard';
 import { Auth } from './components/Auth';
 import { LoggedInHome } from './components/LoggedInHome';
+import { ProfileManager } from './components/ProfileManager';
 import { supabase } from './supabaseClient';
 import { Cpu, Users, EyeOff, BarChart3, Home, Shield, Clock, LogOut, Menu, X, User } from 'lucide-react';
 
@@ -18,6 +19,106 @@ function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
+
+  const [developers, setDevelopers] = useState<any[]>([]);
+  const [currentDeveloper, setCurrentDeveloper] = useState<any | null>(null);
+
+  const getBackendUrl = () => {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:5000';
+    }
+    return window.location.origin + '/_/backend';
+  };
+  const BACKEND_URL = getBackendUrl();
+
+  const fetchDevelopers = async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/developers`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.developers) {
+          setDevelopers(data.developers);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch developers list:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchDevelopers();
+  }, []);
+
+  // Update currentDeveloper when developers list or session changes
+  useEffect(() => {
+    if (session && session.user) {
+      const email = session.user.email || '';
+      const name = email.split('@')[0] || '';
+      const fullName = session.user.user_metadata?.fullName || '';
+
+      // Try to find matching developer in registry
+      let matched = developers.find((d: any) => 
+        d.id === session.user.id || 
+        d.name.toLowerCase() === fullName.toLowerCase() ||
+        (d.gitHubUsername && email.toLowerCase().includes(d.gitHubUsername.toLowerCase()))
+      );
+
+      if (!matched && (userRole === 'developer' || email === 'developer@devnexus.local')) {
+        // Fallback stub for new developer
+        matched = {
+          id: session.user.id || 'dev-001',
+          name: fullName || 'Alex Rivers',
+          title: 'Full Stack & WebRTC Expert',
+          avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=150&q=80',
+          bio: 'Specialist in real-time collaboration applications, WebRTC communication channels, and secure document sharing rooms. Over 8 years of experience building secure B2B SaaS platforms.',
+          skills: ['React', 'Node.js', 'WebRTC', 'TypeScript', 'Supabase', 'Socket.io', 'Tailwind', 'PostgreSQL'],
+          hourlyRate: 115,
+          availability: 'Available Now',
+          rating: 4.9,
+          reviewsCount: 24,
+          gitHubUsername: 'alexrivers-dev',
+          niche: 'WebRTC & SaaS Infrastructure',
+          verified: true,
+          location: 'San Francisco, CA',
+          education: [
+            { degree: 'B.S. in Computer Science', institution: 'UC Berkeley', year: '2018' }
+          ],
+          certifications: [
+            { name: 'AWS Certified Solutions Architect', issuer: 'Amazon Web Services', year: '2021', link: 'https://aws.amazon.com' }
+          ],
+          projectPortfolio: [
+            {
+              projectName: 'webrtc-secure-mesh',
+              description: 'End-to-end encrypted video and audio conferencing grid using vanilla WebRTC APIs.',
+              techStack: 'TypeScript, React, Node.js',
+              liveUrl: 'https://webrtc-secure-mesh.example.com',
+              repoUrl: 'https://github.com/alexrivers-dev/webrtc-secure-mesh',
+              role: 'Solo Creator',
+              duration: 'Jan 2024 - Apr 2024',
+              achievements: 'Handled 100+ concurrent peers with zero server load; optimized media bitrates for mobile networks.'
+            }
+          ],
+          workHistory: [
+            {
+              companyName: 'DocuTrust Inc.',
+              role: 'Senior WebRTC Engineer',
+              duration: '2021 - Present',
+              description: 'Lead developer for high-security negotiation rooms. Integrated zero-trace ephemeral chat architectures and canvas-based e-signature features.',
+              techStack: 'React, Socket.io, TypeScript'
+            }
+          ],
+          reviews: []
+        };
+      }
+
+      setCurrentDeveloper(matched || null);
+    }
+  }, [developers, session, userRole]);
+
+  const handleProfileUpdated = (updatedDev: any) => {
+    setCurrentDeveloper(updatedDev);
+    setDevelopers(prev => prev.map(d => d.id === updatedDev.id ? updatedDev : d));
+  };
 
   const [session, setSession] = useState<any>(null);
   const [authLoaded, setAuthLoaded] = useState(false);
@@ -407,6 +508,8 @@ function App() {
             <Marketplace
               initialFilters={advisoryFilters}
               onOpenDealRoom={handleOpenDealRoom}
+              developersList={developers}
+              onRefetchDevelopers={fetchDevelopers}
             />
           )}
 
@@ -424,40 +527,11 @@ function App() {
             <Dashboard user={session?.user} />
           )}
 
-          {activeTab === 'profile' && userRole === 'developer' && (
-            <div className="glass-card" style={{ padding: '32px', animation: 'fadeIn 0.5s ease-out' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-                <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}>
-                  <User size={24} />
-                </div>
-                <div>
-                  <h2 style={{ fontSize: '22px' }}>Developer Profile Manager</h2>
-                  <p style={{ color: '#94a3b8', fontSize: '13px' }}>Configure your professional card parameters rendered inside the public talent registry.</p>
-                </div>
-              </div>
-              <div style={{ display: 'grid', gap: '20px', maxWidth: '600px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', color: '#cbd5e1', marginBottom: '6px', fontWeight: 600 }}>Hourly Billing Rate ($USD)</label>
-                  <input type="number" defaultValue={115} style={{ width: '100%', background: '#080c14', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '6px', color: '#fff' }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', color: '#cbd5e1', marginBottom: '6px', fontWeight: 600 }}>Availability State</label>
-                  <select defaultValue="Available Now" style={{ width: '100%', background: '#080c14', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '6px', color: '#fff' }}>
-                    <option>Available Now</option>
-                    <option>In 1 Week</option>
-                    <option>In 2 Weeks</option>
-                    <option>Not Available</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', color: '#cbd5e1', marginBottom: '6px', fontWeight: 600 }}>Professional Portfolio Link</label>
-                  <input type="text" defaultValue="https://github.com/alexrivers" style={{ width: '100%', background: '#080c14', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '6px', color: '#fff' }} />
-                </div>
-                <button onClick={() => alert('Profile parameters updated in database registry.')} className="btn-glow-blue" style={{ background: '#3b82f6', border: 'none', color: '#fff', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>
-                  Save Profile Changes
-                </button>
-              </div>
-            </div>
+          {activeTab === 'profile' && userRole === 'developer' && currentDeveloper && (
+            <ProfileManager 
+              currentDeveloper={currentDeveloper} 
+              onProfileUpdated={handleProfileUpdated} 
+            />
           )}
         </main>
       </div>

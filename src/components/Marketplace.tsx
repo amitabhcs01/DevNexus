@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Search, Star, Award, ShieldCheck, GitFork, ArrowRight, X, Cpu, Code } from 'lucide-react';
+import { Users, Search, Star, Award, ShieldCheck, GitFork, ArrowRight, X, Cpu, Code, GraduationCap, Briefcase, MapPin, Loader2 } from 'lucide-react';
 import { mockDevelopers } from '../data/mockData';
 import type { Developer } from '../types';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
@@ -7,9 +7,16 @@ import { supabase, isSupabaseConfigured } from '../supabaseClient';
 interface MarketplaceProps {
   initialFilters?: { skills: string[]; budget: number } | null;
   onOpenDealRoom: (developerName: string) => void;
+  developersList?: Developer[];
+  onRefetchDevelopers?: () => void;
 }
 
-export const Marketplace: React.FC<MarketplaceProps> = ({ initialFilters, onOpenDealRoom }) => {
+export const Marketplace: React.FC<MarketplaceProps> = ({ 
+  initialFilters, 
+  onOpenDealRoom,
+  developersList: sharedDevelopers,
+  onRefetchDevelopers
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [maxRate, setMaxRate] = useState(160);
@@ -25,12 +32,34 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ initialFilters, onOpen
   
   const [developersList, setDevelopersList] = useState<Developer[]>([]);
 
-  // Fetch developers from Supabase DB on mount
+  // Live GitHub Stats States
+  const [githubStats, setGithubStats] = useState<{
+    profile: any;
+    repos: any[];
+    languages: { name: string; pct: number; color: string }[];
+    totalStars: number;
+    totalForks: number;
+    prCount: number;
+    issueCount: number;
+    rateLimitHit: boolean;
+  } | null>(null);
+  const [loadingGithub, setLoadingGithub] = useState(false);
+
+  // Sync with shared developers list prop
   useEffect(() => {
+    if (sharedDevelopers && sharedDevelopers.length > 0) {
+      setDevelopersList(sharedDevelopers);
+    }
+  }, [sharedDevelopers]);
+
+  // Fetch developers from Supabase DB on mount if shared developers list is empty
+  useEffect(() => {
+    if (sharedDevelopers && sharedDevelopers.length > 0) {
+      return;
+    }
     const fetchDevelopers = async () => {
       try {
         if (!isSupabaseConfigured) {
-          // Initialize mock developers with techStack property
           const mappedMock = mockDevelopers.map(dev => ({
             ...dev,
             techStack: dev.skills
@@ -184,6 +213,117 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ initialFilters, onOpen
     { source: 'Node.js', target: 'Go' },
     { source: 'TypeScript', target: 'Cryptography' }
   ];
+
+  // Live GitHub Data Fetching Hook
+  useEffect(() => {
+    if (!selectedDeveloper) {
+      setGithubStats(null);
+      return;
+    }
+
+    const username = selectedDeveloper.gitHubUsername;
+    if (!username) {
+      setGithubStats(null);
+      return;
+    }
+
+    const fetchGithubData = async () => {
+      setLoadingGithub(true);
+      try {
+        const userRes = await fetch(`https://api.github.com/users/${username}`);
+        if (userRes.status === 403) {
+          setGithubStats({
+            profile: null,
+            repos: [],
+            languages: [],
+            totalStars: 0,
+            totalForks: 0,
+            prCount: 0,
+            issueCount: 0,
+            rateLimitHit: true
+          });
+          return;
+        }
+        if (!userRes.ok) throw new Error('Failed to fetch user');
+        const profile = await userRes.json();
+
+        const reposRes = await fetch(`https://api.github.com/users/${username}/repos?per_page=100&sort=updated`);
+        if (reposRes.status === 403) {
+          setGithubStats({
+            profile,
+            repos: [],
+            languages: [],
+            totalStars: 0,
+            totalForks: 0,
+            prCount: 0,
+            issueCount: 0,
+            rateLimitHit: true
+          });
+          return;
+        }
+        if (!reposRes.ok) throw new Error('Failed to fetch repos');
+        const repos = await reposRes.json();
+
+        // Calculate stars, forks and languages
+        let totalStars = 0;
+        let totalForks = 0;
+        const langCounts: Record<string, number> = {};
+
+        repos.forEach((r: any) => {
+          totalStars += r.stargazers_count || 0;
+          totalForks += r.forks_count || 0;
+          if (r.language) {
+            langCounts[r.language] = (langCounts[r.language] || 0) + 1;
+          }
+        });
+
+        const totalLangs = Object.values(langCounts).reduce((a, b) => a + b, 0);
+        const colors = ['#3b82f6', '#10b981', '#8b5cf6', '#f97316', '#ec4899', '#facc15'];
+        const languages = Object.entries(langCounts)
+          .map(([name, count], idx) => ({
+            name,
+            pct: Math.round((count / totalLangs) * 100),
+            color: colors[idx % colors.length]
+          }))
+          .sort((a, b) => b.pct - a.pct);
+
+        let prCount = 0;
+        let issueCount = 0;
+        try {
+          const prRes = await fetch(`https://api.github.com/search/issues?q=author:${username}+type:pr+is:merged`);
+          if (prRes.ok) {
+            const prData = await prRes.json();
+            prCount = prData.total_count || 0;
+          }
+          const issueRes = await fetch(`https://api.github.com/search/issues?q=author:${username}+type:issue+is:closed`);
+          if (issueRes.ok) {
+            const issueData = await issueRes.json();
+            issueCount = issueData.total_count || 0;
+          }
+        } catch (e) {
+          console.warn('GitHub search API rate limit or error:', e);
+        }
+
+        setGithubStats({
+          profile,
+          repos: repos.sort((a: any, b: any) => (b.stargazers_count || 0) - (a.stargazers_count || 0)).slice(0, 5),
+          languages,
+          totalStars,
+          totalForks,
+          prCount,
+          issueCount,
+          rateLimitHit: false
+        });
+      } catch (err) {
+        console.error('Github API fetch error:', err);
+        setGithubStats(null);
+      } finally {
+        setLoadingGithub(false);
+      }
+    };
+
+    fetchGithubData();
+  }, [selectedDeveloper]);
 
   // Load Advisory Filters if passed
   useEffect(() => {
@@ -860,7 +1000,12 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ initialFilters, onOpen
                   )}
                 </div>
                 <p style={{ color: '#cbd5e1', fontSize: '15px', marginBottom: '6px' }}>{selectedDeveloper.title}</p>
-                <div style={{ display: 'flex', gap: '16px', fontSize: '13px', color: '#94a3b8' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '13px', color: '#94a3b8' }}>
+                  {((selectedDeveloper as any).location) && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <MapPin size={13} color="#ef4444" /> {(selectedDeveloper as any).location}
+                    </span>
+                  )}
                   <span>Niche: <strong style={{ color: '#fff' }}>{selectedDeveloper.niche}</strong></span>
                   <span>Rate: <strong style={{ color: '#10b981' }}>${selectedDeveloper.hourlyRate}/hr</strong></span>
                   <span>Rating: <strong style={{ color: '#fff' }}>{selectedDeveloper.rating} ★</strong></span>
@@ -868,45 +1013,241 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ initialFilters, onOpen
               </div>
             </div>
 
-            {/* GitHub integration mock */}
+            {/* GitHub integration (Real Data Only) */}
             <div style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '16px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Code size={16} /> Verified Code Contributions
+              <h3 style={{ fontSize: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Code size={18} color="#60a5fa" /> Live GitHub Contributions
               </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-                {selectedDeveloper.githubRepos.map(repo => (
-                  <div key={repo.name} style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <h4 style={{ fontSize: '13px', color: '#60a5fa', marginBottom: '8px', wordBreak: 'break-all' }}>
-                      {selectedDeveloper.gitHubUsername}/{repo.name}
-                    </h4>
-                    <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: '#64748b' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}><Star size={11} /> {repo.stars} stars</span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}><GitFork size={11} /> {repo.forks}</span>
-                      <span>{repo.language}</span>
+              
+              {!selectedDeveloper.gitHubUsername ? (
+                <div className="glass-card" style={{ padding: '24px', textAlign: 'center', background: 'rgba(255,255,255,0.01)', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                  <Github size={32} style={{ color: '#64748b', margin: '0 auto 12px auto', display: 'block' }} />
+                  <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '12px' }}>No GitHub profile connected.</p>
+                  <button 
+                    disabled 
+                    style={{ background: 'rgba(59, 130, 246, 0.2)', border: 'none', color: '#90cdf4', padding: '6px 16px', borderRadius: '6px', fontSize: '12px', fontWeight: 600 }}
+                  >
+                    Connect GitHub Profile
+                  </button>
+                </div>
+              ) : loadingGithub ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px', gap: '8px', color: '#94a3b8', fontSize: '13px' }}>
+                  <Loader2 size={18} className="spin" color="#3b82f6" />
+                  <span>Fetching real-time profile metrics from api.github.com...</span>
+                </div>
+              ) : githubStats?.rateLimitHit ? (
+                <div className="glass-card" style={{ padding: '20px', borderLeft: '4px solid #f59e0b', background: 'rgba(245,158,11,0.03)' }}>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <AlertCircle size={20} color="#f59e0b" style={{ flexShrink: 0 }} />
+                    <div>
+                      <h4 style={{ fontSize: '13px', color: '#f8fafc', marginBottom: '4px', fontWeight: 600 }}>API Rate Limit Exceeded</h4>
+                      <p style={{ fontSize: '12px', color: '#94a3b8', lineHeight: 1.4 }}>
+                        Public GitHub API limits have been reached for this IP. Contribution metrics are temporarily unavailable. Never loading simulated profiles — showing status active.
+                      </p>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ) : githubStats && githubStats.profile ? (
+                <div style={{ display: 'grid', gap: '20px' }}>
+                  {/* Stats Cards Grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '12px' }}>
+                    <div style={gitCardStyle}>
+                      <span style={gitLabelStyle}>Repos</span>
+                      <strong style={gitValStyle}>{githubStats.profile.public_repos}</strong>
+                    </div>
+                    <div style={gitCardStyle}>
+                      <span style={gitLabelStyle}>Stars</span>
+                      <strong style={gitValStyle}>{githubStats.totalStars}</strong>
+                    </div>
+                    <div style={gitCardStyle}>
+                      <span style={gitLabelStyle}>Forks</span>
+                      <strong style={gitValStyle}>{githubStats.totalForks}</strong>
+                    </div>
+                    <div style={gitCardStyle}>
+                      <span style={gitLabelStyle}>Followers</span>
+                      <strong style={gitValStyle}>{githubStats.profile.followers}</strong>
+                    </div>
+                    <div style={gitCardStyle}>
+                      <span style={gitLabelStyle}>PRs Merged</span>
+                      <strong style={{ ...gitValStyle, color: '#a78bfa' }}>{githubStats.prCount}</strong>
+                    </div>
+                    <div style={gitCardStyle}>
+                      <span style={gitLabelStyle}>Closed Issues</span>
+                      <strong style={{ ...gitValStyle, color: '#f97316' }}>{githubStats.issueCount}</strong>
+                    </div>
+                  </div>
+
+                  {/* Languages and Repos lists */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginTop: '8px' }}>
+                    {/* Language pie/bar representation */}
+                    <div className="glass-card" style={{ padding: '20px', background: 'rgba(0,0,0,0.1)' }}>
+                      <h4 style={{ fontSize: '13px', color: '#cbd5e1', marginBottom: '16px', fontWeight: 600 }}>Top Programming Languages</h4>
+                      {githubStats.languages.length === 0 ? (
+                        <div style={{ fontSize: '12px', color: '#64748b', textAlign: 'center', padding: '16px' }}>No language details indexable.</div>
+                      ) : (
+                        <div style={{ display: 'grid', gap: '12px' }}>
+                          {githubStats.languages.slice(0, 4).map(lang => (
+                            <div key={lang.name}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#94a3b8', marginBottom: '4px' }}>
+                                <span>{lang.name}</span>
+                                <span style={{ fontWeight: 600, color: '#fff' }}>{lang.pct}%</span>
+                              </div>
+                              <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                                <div style={{ width: `${lang.pct}%`, height: '100%', background: lang.color, borderRadius: '3px' }} />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Top 5 Repos list */}
+                    <div>
+                      <h4 style={{ fontSize: '13px', color: '#cbd5e1', marginBottom: '12px', fontWeight: 600 }}>Top Repositories</h4>
+                      <div style={{ display: 'grid', gap: '8px' }}>
+                        {githubStats.repos.map(repo => (
+                          <div key={repo.name} style={{ background: 'rgba(255,255,255,0.01)', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ minWidth: 0 }}>
+                              <h5 style={{ fontSize: '12px', color: '#60a5fa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{repo.name}</h5>
+                              <span style={{ fontSize: '10px', color: '#34d399', background: 'rgba(16,185,129,0.1)', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', marginTop: '4px' }}>{repo.language || 'Code'}</span>
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px', fontSize: '11px', color: '#64748b', flexShrink: 0 }}>
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}><Star size={11} /> {repo.stargazers_count}</span>
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}><GitFork size={11} /> {repo.forks_count}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ fontSize: '12px', color: '#64748b', textAlign: 'center', padding: '16px' }}>Failed to load GitHub data.</div>
+              )}
             </div>
 
-            {/* Project History */}
-            <div style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '16px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Award size={16} /> Verified Project History
-              </h3>
-              <div style={{ display: 'grid', gap: '16px' }}>
-                {selectedDeveloper.projectHistory.map((proj, idx) => (
-                  <div key={idx} style={{ background: 'rgba(255,255,255,0.01)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                      <h4 style={{ fontSize: '14px', color: '#cbd5e1' }}>{proj.projectName}</h4>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>{proj.duration}</span>
+            {/* Project Portfolio (manual) */}
+            {(selectedDeveloper as any).projectPortfolio && (selectedDeveloper as any).projectPortfolio.length > 0 && (
+              <div style={{ marginBottom: '32px' }}>
+                <h3 style={{ fontSize: '16px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Award size={16} color="#8b5cf6" /> Portfolio Projects
+                </h3>
+                <div style={{ display: 'grid', gap: '16px' }}>
+                  {(selectedDeveloper as any).projectPortfolio.map((proj: any, idx: number) => (
+                    <div key={idx} style={{ background: 'rgba(255,255,255,0.01)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                        <h4 style={{ fontSize: '15px', color: '#fff' }}>{proj.projectName}</h4>
+                        <span style={{ fontSize: '12px', color: '#8b5cf6', fontWeight: 600 }}>{proj.duration}</span>
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#34d399', fontWeight: 600, marginBottom: '10px' }}>Role: {proj.role}</div>
+                      <p style={{ color: '#cbd5e1', fontSize: '13px', lineHeight: 1.5, marginBottom: '12px' }}>{proj.description}</p>
+                      {proj.achievements && (
+                        <div style={{ fontSize: '12px', color: '#94a3b8', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '6px', marginBottom: '12px' }}>
+                          <strong>Achievements:</strong> {proj.achievements}
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', fontSize: '12px' }}>
+                        <span style={{ color: '#64748b' }}>Tech: <strong style={{ color: '#cbd5e1' }}>{proj.techStack}</strong></span>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                          {proj.liveUrl && <a href={proj.liveUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', textDecoration: 'none' }}>Live Demo →</a>}
+                          {proj.repoUrl && <a href={proj.repoUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', textDecoration: 'none' }}>GitHub Repo →</a>}
+                        </div>
+                      </div>
                     </div>
-                    <div style={{ fontSize: '11px', color: '#8b5cf6', fontWeight: 600, marginBottom: '8px' }}>Client: {proj.client}</div>
-                    <p style={{ color: '#94a3b8', fontSize: '13px', fontStyle: 'italic', lineHeight: 1.4 }}>"{proj.feedback}"</p>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Work History */}
+            {(selectedDeveloper as any).workHistory && (selectedDeveloper as any).workHistory.length > 0 && (
+              <div style={{ marginBottom: '32px' }}>
+                <h3 style={{ fontSize: '16px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Briefcase size={16} color="#8b5cf6" /> Past Work Experiences
+                </h3>
+                <div style={{ display: 'grid', gap: '16px' }}>
+                  {(selectedDeveloper as any).workHistory.map((work: any, idx: number) => (
+                    <div key={idx} style={{ background: 'rgba(255,255,255,0.01)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                        <h4 style={{ fontSize: '15px', color: '#fff' }}>{work.companyName}</h4>
+                        <span style={{ fontSize: '12px', color: '#f97316', fontWeight: 600 }}>{work.duration}</span>
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#cbd5e1', fontWeight: 500, marginBottom: '10px' }}>{work.role}</div>
+                      <p style={{ color: '#94a3b8', fontSize: '13px', lineHeight: 1.5, marginBottom: '10px' }}>{work.description}</p>
+                      {work.techStack && (
+                        <div style={{ fontSize: '11px', color: '#64748b' }}>
+                          Tech: <strong style={{ color: '#cbd5e1' }}>{work.techStack}</strong>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Education & Certifications Row */}
+            {(((selectedDeveloper as any).education && (selectedDeveloper as any).education.length > 0) || ((selectedDeveloper as any).certifications && (selectedDeveloper as any).certifications.length > 0)) && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', marginBottom: '32px' }}>
+                {(selectedDeveloper as any).education && (selectedDeveloper as any).education.length > 0 && (
+                  <div>
+                    <h3 style={{ fontSize: '16px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <GraduationCap size={16} color="#8b5cf6" /> Education
+                    </h3>
+                    <div style={{ display: 'grid', gap: '12px' }}>
+                      {(selectedDeveloper as any).education.map((edu: any, idx: number) => (
+                        <div key={idx} style={{ background: 'rgba(255,255,255,0.01)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                          <h4 style={{ fontSize: '13px', color: '#fff' }}>{edu.degree}</h4>
+                          <div style={{ fontSize: '12px', color: '#94a3b8' }}>{edu.institution}</div>
+                          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>Graduated {edu.year}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(selectedDeveloper as any).certifications && (selectedDeveloper as any).certifications.length > 0 && (
+                  <div>
+                    <h3 style={{ fontSize: '16px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Award size={16} color="#8b5cf6" /> Certifications
+                    </h3>
+                    <div style={{ display: 'grid', gap: '12px' }}>
+                      {(selectedDeveloper as any).certifications.map((cert: any, idx: number) => (
+                        <div key={idx} style={{ background: 'rgba(255,255,255,0.01)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                          <h4 style={{ fontSize: '13px', color: '#fff' }}>{cert.name}</h4>
+                          <div style={{ fontSize: '12px', color: '#94a3b8' }}>{cert.issuer} ({cert.year})</div>
+                          {cert.link && (
+                            <a href={cert.link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', fontSize: '11px', color: '#60a5fa', textDecoration: 'none', marginTop: '6px' }}>
+                              Verify Certificate →
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Legacy Project History Fallback if needed */}
+            {(!selectedDeveloper.workHistory || selectedDeveloper.workHistory.length === 0) && selectedDeveloper.projectHistory && selectedDeveloper.projectHistory.length > 0 && (
+              <div style={{ marginBottom: '32px' }}>
+                <h3 style={{ fontSize: '16px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Award size={16} /> Verified Project History (Client Feed)
+                </h3>
+                <div style={{ display: 'grid', gap: '16px' }}>
+                  {selectedDeveloper.projectHistory.map((proj, idx) => (
+                    <div key={idx} style={{ background: 'rgba(255,255,255,0.01)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <h4 style={{ fontSize: '14px', color: '#cbd5e1' }}>{proj.projectName}</h4>
+                        <span style={{ fontSize: '12px', color: '#64748b' }}>{proj.duration}</span>
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#8b5cf6', fontWeight: 600, marginBottom: '8px' }}>Client: {proj.client}</div>
+                      <p style={{ color: '#94a3b8', fontSize: '13px', fontStyle: 'italic', lineHeight: 1.4 }}>"{proj.feedback}"</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Reviews */}
             <div style={{ marginBottom: '24px' }}>
@@ -965,3 +1306,30 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ initialFilters, onOpen
     </div>
   );
 };
+
+const gitCardStyle: React.CSSProperties = {
+  background: 'rgba(255, 255, 255, 0.02)',
+  border: '1px solid rgba(255, 255, 255, 0.05)',
+  borderRadius: '8px',
+  padding: '12px 8px',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  textAlign: 'center'
+};
+
+const gitLabelStyle: React.CSSProperties = {
+  fontSize: '10px',
+  color: '#64748b',
+  textTransform: 'uppercase',
+  fontWeight: 600,
+  marginBottom: '4px'
+};
+
+const gitValStyle: React.CSSProperties = {
+  fontSize: '18px',
+  color: '#3b82f6',
+  fontWeight: 'bold'
+};
+
