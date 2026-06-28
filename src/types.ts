@@ -143,4 +143,5 @@ export interface EphemeralFile {
   size: string;
   type: string;
   contentMock: string;
+  uploadedBy?: string;
 }

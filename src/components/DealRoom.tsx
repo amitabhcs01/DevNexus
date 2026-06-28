@@ -28,7 +28,7 @@ export const DealRoom = ({ defaultPartner = 'Amazon Web Services', onNavigateToD
   const [repB, setRepB] = useState('Andy Jassy (CEO)');
   const [ndaType, setNdaType] = useState('Corporate Mutual Non-Disclosure Agreement');
   const [ipClauses, setIpClauses] = useState('All background intellectual property remains vested in original owner; foreground IP is shared equally.');
-  const [duration, setDuration] = useState('5 Years');
+  const [duration] = useState('5 Years');
   const [jurisdiction, setJurisdiction] = useState('Delaware Chancery Court');
   
   // Deal Terms State
