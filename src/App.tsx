@@ -20,6 +20,17 @@ function App() {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
 
+  const [session, setSession] = useState<any>(null);
+  const [authLoaded, setAuthLoaded] = useState(false);
+
+  // Determine user role if session exists
+  const userEmail = session?.user?.email || '';
+  const userRole = userEmail === 'admin@devnexus.local' 
+    ? 'admin' 
+    : userEmail === 'developer@devnexus.local' || session?.user?.user_metadata?.role === 'developer'
+      ? 'developer'
+      : 'client';
+
   const [developers, setDevelopers] = useState<any[]>([]);
   const [currentDeveloper, setCurrentDeveloper] = useState<any | null>(null);
 
@@ -53,7 +64,6 @@ function App() {
   useEffect(() => {
     if (session && session.user) {
       const email = session.user.email || '';
-      const name = email.split('@')[0] || '';
       const fullName = session.user.user_metadata?.fullName || '';
 
       // Try to find matching developer in registry
@@ -120,8 +130,7 @@ function App() {
     setDevelopers(prev => prev.map(d => d.id === updatedDev.id ? updatedDev : d));
   };
 
-  const [session, setSession] = useState<any>(null);
-  const [authLoaded, setAuthLoaded] = useState(false);
+
 
   useEffect(() => {
     // Check local storage session fallback
@@ -178,13 +187,7 @@ function App() {
     );
   }
 
-  // Determine user role if session exists
-  const userEmail = session?.user?.email || '';
-  const userRole = userEmail === 'admin@devnexus.local' 
-    ? 'admin' 
-    : userEmail === 'developer@devnexus.local' || session?.user?.user_metadata?.role === 'developer'
-      ? 'developer'
-      : 'client';
+
 
   if (!session) {
     if (showAuth) {

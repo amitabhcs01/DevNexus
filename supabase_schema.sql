@@ -185,6 +185,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     experience_level TEXT,
     portfolio_link TEXT,
     password_hash TEXT,
+    hourly_rate INTEGER,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -203,11 +204,61 @@ ON public.profiles FOR UPDATE
 USING (auth.uid() = id);
 
 -- Seed default profiles for demonstration
-INSERT INTO public.profiles (id, email, role, company_name, corporate_title, project_budget, full_name, key_skills, experience_level, portfolio_link, password_hash)
+INSERT INTO public.profiles (id, email, role, company_name, corporate_title, project_budget, full_name, key_skills, experience_level, portfolio_link, password_hash, hourly_rate)
 VALUES
-('00000000-0000-0000-0000-000000000001', 'admin@devnexus.local', 'admin', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'c05d76d4994276707a00f13511eb0fa7e268a73b3eb72f10b78c93ef859ff7b8'),
-('00000000-0000-0000-0000-000000000002', 'client@devnexus.local', 'client', 'Nexus Capital', 'Managing Partner', 150000, NULL, NULL, NULL, NULL, '030737a4db77c687e14bdbe39cdfeebfbca65a58a74e548ad7cd6cdcfb577484'),
-('00000000-0000-0000-0000-000000000003', 'developer@devnexus.local', 'developer', NULL, NULL, NULL, 'Alex Rivers', 'React, WebRTC, Node.js', 'senior', 'https://github.com/alexrivers', '22a101f3cf65d9c7bb7ec32057d3835697d268d0de1f1737be2e6ea9bf472251'),
-('00000000-0000-0000-0000-000000000004', 'chloe.zhao@devnexus.local', 'developer', NULL, NULL, NULL, 'Chloe Zhao', 'React, Next.js, Framer Motion', 'senior', 'https://github.com/chloez-design', '22a101f3cf65d9c7bb7ec32057d3835697d268d0de1f1737be2e6ea9bf472251'),
-('00000000-0000-0000-0000-000000000005', 'john.founder@acme.com', 'client', 'Acme Corp', 'CEO & Founder', 35000, NULL, NULL, NULL, NULL, '030737a4db77c687e14bdbe39cdfeebfbca65a58a74e548ad7cd6cdcfb577484')
+('00000000-0000-0000-0000-000000000001', 'admin@devnexus.local', 'admin', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'c05d76d4994276707a00f13511eb0fa7e268a73b3eb72f10b78c93ef859ff7b8', NULL),
+('00000000-0000-0000-0000-000000000002', 'client@devnexus.local', 'client', 'Nexus Capital', 'Managing Partner', 150000, NULL, NULL, NULL, NULL, '030737a4db77c687e14bdbe39cdfeebfbca65a58a74e548ad7cd6cdcfb577484', NULL),
+('00000000-0000-0000-0000-000000000003', 'developer@devnexus.local', 'developer', NULL, NULL, NULL, 'Alex Rivers', 'React, WebRTC, Node.js', 'senior', 'https://github.com/alexrivers', '22a101f3cf65d9c7bb7ec32057d3835697d268d0de1f1737be2e6ea9bf472251', 115),
+('00000000-0000-0000-0000-000000000004', 'chloe.zhao@devnexus.local', 'developer', NULL, NULL, NULL, 'Chloe Zhao', 'React, Next.js, Framer Motion', 'senior', 'https://github.com/chloez-design', '22a101f3cf65d9c7bb7ec32057d3835697d268d0de1f1737be2e6ea9bf472251', 125),
+('00000000-0000-0000-0000-000000000005', 'john.founder@acme.com', 'client', 'Acme Corp', 'CEO & Founder', 35000, NULL, NULL, NULL, NULL, '030737a4db77c687e14bdbe39cdfeebfbca65a58a74e548ad7cd6cdcfb577484', NULL)
 ON CONFLICT (id) DO NOTHING;
+
+-- Trigger function to auto-sync profiles -> developers
+CREATE OR REPLACE FUNCTION public.sync_profile_to_developer()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.role = 'developer' THEN
+        INSERT INTO public.developers (
+            id,
+            name,
+            title,
+            avatar,
+            bio,
+            skills,
+            hourly_rate,
+            availability,
+            rating,
+            reviews_count,
+            git_username,
+            niche,
+            verified
+        )
+        VALUES (
+            NEW.id::text,
+            COALESCE(NEW.full_name, split_part(NEW.email, '@', 1)),
+            COALESCE(NEW.corporate_title, 'Full Stack Engineer'),
+            'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+            'Specialist in ' || COALESCE(NEW.key_skills, 'software development') || '.',
+            COALESCE(string_to_array(NEW.key_skills, ', '), ARRAY['React', 'Node.js']),
+            COALESCE(NEW.hourly_rate, 100),
+            'Available Now',
+            5.0,
+            0,
+            COALESCE(split_part(NEW.portfolio_link, 'github.com/', 2), ''),
+            'SaaS Software Development',
+            false
+        )
+        ON CONFLICT (id) DO UPDATE SET
+            name = EXCLUDED.name,
+            hourly_rate = COALESCE(EXCLUDED.hourly_rate, public.developers.hourly_rate),
+            git_username = COALESCE(NULLIF(EXCLUDED.git_username, ''), public.developers.git_username);
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger
+CREATE OR REPLACE TRIGGER tr_sync_profile_to_developer
+AFTER INSERT OR UPDATE ON public.profiles
+FOR EACH ROW
+EXECUTE FUNCTION public.sync_profile_to_developer();

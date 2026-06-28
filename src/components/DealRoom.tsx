@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   ShieldCheck, Lock, CheckCircle, MessageSquare, FileText, 
   Trash2, Key, Terminal, RefreshCw, LogOut, Copy, Upload, 
-  ArrowRight, Users, Share2, DollarSign, Calendar, Activity, Loader2
+  ArrowRight, Share2, DollarSign, Loader2
 } from 'lucide-react';
 import type { ChatMessage, EphemeralFile } from '../types';
 import { io } from 'socket.io-client';
@@ -28,7 +28,7 @@ export const DealRoom = ({ defaultPartner = 'Amazon Web Services', onNavigateToD
   const [repB, setRepB] = useState('Andy Jassy (CEO)');
   const [ndaType, setNdaType] = useState('Corporate Mutual Non-Disclosure Agreement');
   const [ipClauses, setIpClauses] = useState('All background intellectual property remains vested in original owner; foreground IP is shared equally.');
-  const [duration, setDuration] = useState('5 Years');
+  const duration = '5 Years';
   const [jurisdiction, setJurisdiction] = useState('Delaware Chancery Court');
   
   // Deal Terms State
@@ -152,7 +152,7 @@ export const DealRoom = ({ defaultPartner = 'Amazon Web Services', onNavigateToD
         });
       });
 
-      socket.on('nda:signed', ({ status, party }: any) => {
+      socket.on('nda:signed', ({ party }: any) => {
         if (party === 'PartyA') setSignedA(true);
         if (party === 'PartyB') setSignedB(true);
       });
@@ -345,6 +345,10 @@ export const DealRoom = ({ defaultPartner = 'Amazon Web Services', onNavigateToD
     const rect = canvas.getBoundingClientRect();
     ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
     ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    setIsDrawing(false);
   };
 
   const clearCanvas = () => {

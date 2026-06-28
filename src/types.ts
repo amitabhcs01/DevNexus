@@ -20,6 +20,38 @@ export interface ProjectHistoryItem {
   feedback: string;
 }
 
+export interface WorkHistoryItem {
+  companyName: string;
+  role: string;
+  duration: string;
+  description: string;
+  techStack?: string;
+}
+
+export interface EducationItem {
+  degree: string;
+  institution: string;
+  year: string;
+}
+
+export interface CertificationItem {
+  name: string;
+  issuer: string;
+  year: string;
+  link?: string;
+}
+
+export interface ProjectPortfolioItem {
+  projectName: string;
+  description: string;
+  techStack: string;
+  liveUrl?: string;
+  repoUrl?: string;
+  role?: string;
+  duration?: string;
+  achievements?: string;
+}
+
 export interface Developer {
   id: string;
   name: string;
@@ -28,7 +60,7 @@ export interface Developer {
   bio: string;
   skills: string[];
   hourlyRate: number;
-  availability: 'Available Now' | 'In 1 Week' | 'In 2 Weeks' | 'Unavailable';
+  availability: 'Available Now' | 'In 1 Week' | 'In 2 Weeks' | 'Unavailable' | string;
   rating: number;
   reviewsCount: number;
   reviews: Review[];
@@ -38,6 +70,11 @@ export interface Developer {
   verified: boolean;
   niche: string;
   techStack?: string[];
+  location?: string;
+  education?: EducationItem[];
+  certifications?: CertificationItem[];
+  projectPortfolio?: ProjectPortfolioItem[];
+  workHistory?: WorkHistoryItem[];
 }
 
 export interface ProjectBrief {
